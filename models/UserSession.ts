@@ -35,8 +35,6 @@ const UserSessionSchema: Schema<IUserSession> = new Schema({
   timestamps: true
 });
 
-// Cleanup expired sessions
-UserSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const UserSession: Model<IUserSession> = mongoose.models.UserSession || mongoose.model<IUserSession>('UserSession', UserSessionSchema);
 

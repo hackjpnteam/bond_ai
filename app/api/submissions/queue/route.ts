@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions, isAdmin } from '@/lib/auth'
+import { authOptions, isAdmin } from '@/lib/auth-options'
 import { getCollection } from '@/lib/db'
 import { SubmissionDoc, UserDoc, CompanyDoc } from '@/lib/models'
 

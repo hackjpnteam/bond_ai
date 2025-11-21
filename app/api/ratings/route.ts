@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ObjectId } from 'mongodb'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { authOptions } from '@/lib/auth-options'
 import { getDb } from '@/lib/db'
 import { RatingDoc, CompanyDoc } from '@/lib/models'
 

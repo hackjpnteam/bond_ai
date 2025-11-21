@@ -49,6 +49,9 @@
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.1.11"
   },
+  "optionalDependencies": {
+    "lightningcss": "^1.25.1"
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/cytoscape": "^3.21.9",

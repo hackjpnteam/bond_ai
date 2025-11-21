@@ -1,0 +1,14 @@
+eval "$(rbenv init - zsh)"
+eval "$(rbenv init - zsh)"
+eval "$(rbenv init - zsh)"
+eval "$(rbenv init - zsh)"
+export NVM_DIR="$HOME/.nvm"
+[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && . "/opt/homebrew/opt/nvm/nvm.sh"
+[ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && . "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
+export PATH="$PATH:$(npm bin -g)"
+export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Created by `pipx` on 2025-11-02 02:45:41
+export PATH="$PATH:/Users/hikarutomura/.local/bin"
+export OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxx"

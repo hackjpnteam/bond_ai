@@ -1,0 +1,98 @@
+import mongoose, { Document, Model, Schema } from 'mongoose';
+
+export interface IEvaluation extends Document {
+  userId: string;
+  companyName: string;
+  companySlug: string;
+  rating: number;
+  relationshipType: number; // 0-4: 0=未設定, 1=知人, 2=取引先, 3=協業先, 4=投資家
+  comment: string;
+  categories: {
+    culture: number;
+    growth: number;
+    workLifeBalance: number;
+    compensation: number;
+    leadership: number;
+  };
+  editHistory?: Array<{
+    previousRating: number;
+    previousComment: string;
+    editedAt: Date;
+    reason?: string;
+  }>;
+  isPublic: boolean;
+  isAnonymous: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const EvaluationSchema: Schema<IEvaluation> = new Schema({
+  userId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  companyName: {
+    type: String,
+    required: true,
+    trim: true,
+    index: true
+  },
+  companySlug: {
+    type: String,
+    required: true,
+    lowercase: true,
+    trim: true,
+    index: true
+  },
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5
+  },
+  relationshipType: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 4,
+    default: 0
+  },
+  comment: {
+    type: String,
+    required: true,
+    maxlength: 2000
+  },
+  categories: {
+    culture: { type: Number, min: 1, max: 5, required: true },
+    growth: { type: Number, min: 1, max: 5, required: true },
+    workLifeBalance: { type: Number, min: 1, max: 5, required: true },
+    compensation: { type: Number, min: 1, max: 5, required: true },
+    leadership: { type: Number, min: 1, max: 5, required: true }
+  },
+  editHistory: [{
+    previousRating: { type: Number, required: true },
+    previousComment: { type: String, required: true },
+    editedAt: { type: Date, default: Date.now },
+    reason: { type: String, maxlength: 500 }
+  }],
+  isPublic: {
+    type: Boolean,
+    default: true
+  },
+  isAnonymous: {
+    type: Boolean,
+    default: false
+  }
+}, {
+  timestamps: true
+});
+
+// Compound indexes for efficient queries
+EvaluationSchema.index({ userId: 1, companySlug: 1 });
+EvaluationSchema.index({ companySlug: 1, createdAt: -1 });
+EvaluationSchema.index({ userId: 1, createdAt: -1 });
+
+const Evaluation: Model<IEvaluation> = mongoose.models.Evaluation || mongoose.model<IEvaluation>('Evaluation', EvaluationSchema);
+
+export default Evaluation;

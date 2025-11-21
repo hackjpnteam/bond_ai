@@ -1,26 +1,214 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: 255 255 255;
+  --foreground: 31 28 26;
+  --muted: 111 106 103;
+  --muted-foreground: 111 106 103;
+  --border: 231 216 202;
+  --ring: 156 163 175;
+  
+  --bg: #F5ECE2;
+  --surface: #F8F1E9;
+  --surface-2: #EEE2D7;
+  --text: #1F1C1A;
+  --line: #E7D8CA;
+  --font-caveat: 'Caveat', cursive;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@layer base {
+  html, body { 
+    @apply antialiased;
+    background-color: #FFF3F8;
+    min-height: 100vh;
+    color: #1F1C1A;
+    font-family: var(--font-sans);
+    position: relative;
+    overflow-x: hidden; /* 横スクロール抑止 */
+  }
+  
+  img, svg {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Ash風メイングラデーション背景 */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse 130% 100% at 50% 30%, 
+      rgba(255, 220, 200, 0.6) 0%,
+      rgba(255, 183, 158, 0.5) 15%,
+      rgba(255, 209, 184, 0.4) 30%,
+      rgba(240, 220, 190, 0.3) 45%,
+      rgba(200, 240, 220, 0.25) 60%,
+      rgba(255, 255, 255, 0.9) 80%,
+      rgba(255, 255, 255, 1) 100%);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+    z-index: -2;
+  }
+  
+  /* セカンダリオーバーレイ（より複雑なミックス） */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(255, 200, 180, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(180, 240, 200, 0.12) 0%, transparent 50%),
+      radial-gradient(circle at 60% 10%, rgba(255, 220, 190, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 10% 90%, rgba(245, 210, 200, 0.08) 0%, transparent 45%);
+    backdrop-filter: blur(1px);
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  h1 { @apply font-serif text-3xl md:text-4xl lg:text-5xl tracking-wide leading-relaxed; }
+  h2 { @apply font-serif text-3xl md:text-4xl tracking-tight; }
+  h3 { @apply font-serif text-2xl md:text-3xl; }
+  p  { color: #6F6A67; }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer components {
+  .section { @apply py-14 md:py-20; }
+  .container-narrow { @apply w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .card { 
+    @apply rounded-2xl border backdrop-blur-2xl; 
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 30px rgba(0,0,0,0.08); 
+    border-color: rgba(231, 216, 202, 0.4); 
+    background-color: rgba(255, 255, 255, 0.7);
+  }
+  .pill { @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium; }
+
+  /* ボタン */
+  .btn     { @apply inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold no-underline transition backdrop-blur-sm; }
+  .btn-dark{ 
+    @apply inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold no-underline transition hover:opacity-90 backdrop-blur-xl; 
+    background-color: rgba(31, 28, 26, 0.85); 
+    color: #ffffff; 
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .btn-ol  { 
+    @apply inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold no-underline transition border backdrop-blur-xl; 
+    border-color: rgba(231, 216, 202, 0.5); 
+    background-color: rgba(255, 255, 255, 0.6); 
+    color: #1F1C1A; 
+  }
+  .btn-ol:hover { background-color: rgba(255, 255, 255, 0.8); }
+
+  /* ヒーロー装飾のストローク（薄い線） */
+  .stroke-mask { mask-image: radial-gradient(70% 70% at 50% 30%, black, transparent 70%); }
+
+  /* 既存の互換性のため */
+  .glass-card {
+    @apply rounded-2xl border backdrop-blur-2xl; 
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 30px rgba(0,0,0,0.08); 
+    border-color: rgba(231, 216, 202, 0.4); 
+    background-color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .container-custom {
+    @apply container max-w-5xl;
+  }
+  
+  .gradient-text {
+    @apply font-serif;
+    color: #1F1C1A;
+  }
+  
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .section-padding {
+    @apply py-14 md:py-20;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* アニメーション */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInFromLeft 0.8s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.8s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.floating {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .section-padding {
+    @apply py-12;
+  }
+  
+  .btn, .btn-dark, .btn-ol {
+    min-height: 44px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    font-size: 1rem;
+  }
+  
+  .card {
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  h1 {
+    font-size: clamp(2rem, 8vw, 4rem);
+  }
 }

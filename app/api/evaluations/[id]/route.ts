@@ -1,0 +1,146 @@
+import { NextRequest } from 'next/server';
+import { requireAuth } from '@/lib/auth-middleware';
+import connectDB from '@/lib/mongodb';
+import Evaluation from '@/models/Evaluation';
+
+// PUT /api/evaluations/[id] - 評価を更新
+const RELATIONSHIP_OPTIONS = ['shareholder', 'executive', 'employee', 'partner', 'customer', 'other']
+
+export const PUT = requireAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
+  try {
+    await connectDB();
+
+    const { id } = await params;
+    const body = await request.json();
+    const { rating, comment, categories, reason, relationship } = body;
+
+    if (relationship && !RELATIONSHIP_OPTIONS.includes(relationship)) {
+      return new Response(
+        JSON.stringify({ error: '無効な関係性が指定されました' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    // 評価を取得
+    const evaluation = await Evaluation.findOne({
+      _id: id,
+      userId: user.id
+    });
+    
+    if (!evaluation) {
+      return new Response(
+        JSON.stringify({ error: '評価が見つかりません' }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    // 編集履歴に追加
+    if (!evaluation.editHistory) {
+      evaluation.editHistory = [];
+    }
+    
+    evaluation.editHistory.push({
+      previousRating: evaluation.rating,
+      previousComment: evaluation.comment,
+      editedAt: new Date(),
+      reason: reason || ''
+    });
+    
+    // 新しい値を設定
+    if (typeof rating === 'number') {
+      evaluation.rating = rating;
+    }
+    if (typeof comment === 'string') {
+      evaluation.comment = comment;
+    }
+    if (categories) {
+      evaluation.categories = categories;
+    }
+    if (relationship) {
+      evaluation.relationship = relationship;
+    }
+    
+    await evaluation.save();
+    
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: '評価を更新しました',
+        evaluation: {
+          id: evaluation._id.toString(),
+          rating: evaluation.rating,
+          comment: evaluation.comment,
+          categories: evaluation.categories,
+          relationship: evaluation.relationship,
+          editHistory: evaluation.editHistory,
+          updatedAt: evaluation.updatedAt
+        }
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Update evaluation error:', error);
+    return new Response(
+      JSON.stringify({ error: '評価の更新に失敗しました' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
+});
+
+// DELETE /api/evaluations/[id] - 評価を削除
+export const DELETE = requireAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
+  try {
+    await connectDB();
+
+    const { id } = await params;
+    
+    const result = await Evaluation.deleteOne({
+      _id: id,
+      userId: user.id
+    });
+    
+    if (result.deletedCount === 0) {
+      return new Response(
+        JSON.stringify({ error: '評価が見つかりません' }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: '評価を削除しました'
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+    
+  } catch (error) {
+    console.error('Delete evaluation error:', error);
+    return new Response(
+      JSON.stringify({ error: '評価の削除に失敗しました' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
+});

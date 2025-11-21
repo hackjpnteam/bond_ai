@@ -1,0 +1,15 @@
+0000000000000000000000000000000000000000 8c9aeb6d657e0c9fa9b51e049e0a69afbf6d5a3f Your Name <your.email@example.com> 1763359701 +0900	commit (initial): Sync local bond_ai changes
+8c9aeb6d657e0c9fa9b51e049e0a69afbf6d5a3f 8c9aeb6d657e0c9fa9b51e049e0a69afbf6d5a3f Your Name <your.email@example.com> 1763359711 +0900	Branch: renamed refs/heads/master to refs/heads/main
+8c9aeb6d657e0c9fa9b51e049e0a69afbf6d5a3f ae8f619dd0be44861e138681b9e970f66bb9dc3d Your Name <your.email@example.com> 1763360760 +0900	commit: Exclude internal git metadata directory
+ae8f619dd0be44861e138681b9e970f66bb9dc3d 5c685edc1b14568971609199bfbe0d04bb4b05ac Your Name <your.email@example.com> 1763437593 +0900	commit: Replace auth adapter and drop nodemailer peer deps
+5c685edc1b14568971609199bfbe0d04bb4b05ac 0557f38905d7334836d012665c18116c3d37b7f5 Your Name <your.email@example.com> 1763437981 +0900	commit: Ignore lint/type errors during build
+0557f38905d7334836d012665c18116c3d37b7f5 62c6abdbd1a10583bcafc72a4731cacbeb10f76f Your Name <your.email@example.com> 1763441172 +0900	commit: Handle missing Resend API key
+62c6abdbd1a10583bcafc72a4731cacbeb10f76f f2add448f8e1ac30e2d7a424f0b7909b691883f6 Your Name <your.email@example.com> 1763441400 +0900	commit: Lazy initialize Resend email client
+f2add448f8e1ac30e2d7a424f0b7909b691883f6 c094db7c16f09170276be06134e8b7f98e9bf481 Your Name <your.email@example.com> 1763443133 +0900	commit: Add minimal home page
+c094db7c16f09170276be06134e8b7f98e9bf481 8027186fffdd27e692b6c8d58160c951e46c57d5 Your Name <your.email@example.com> 1763444223 +0900	commit: Guard resend verification email
+8027186fffdd27e692b6c8d58160c951e46c57d5 0bf01f0d27b7bf9cf1dbdea727be36d92031b4cd Your Name <your.email@example.com> 1763445283 +0900	commit: Restore full home page design
+0bf01f0d27b7bf9cf1dbdea727be36d92031b4cd c6eaf9532cf48c82856dedcc3cf8c3e8854832e1 Your Name <your.email@example.com> 1763462946 +0900	commit: Update logo and fix top nav
+c6eaf9532cf48c82856dedcc3cf8c3e8854832e1 9b4d818e6ed1f94580ad1f1b7420461629d4557e Your Name <your.email@example.com> 1763463578 +0900	commit: Update footer links to existing pages
+9b4d818e6ed1f94580ad1f1b7420461629d4557e 16ee73ced85c3d154525edc567b241352021c34a Your Name <your.email@example.com> 1763463807 +0900	commit: Remove Bond Launch text in footer
+16ee73ced85c3d154525edc567b241352021c34a ab1edd3c8eb79ccb2a73a85e26dbabc429c031d4 Your Name <your.email@example.com> 1763518583 +0900	commit: Hide footer section
+ab1edd3c8eb79ccb2a73a85e26dbabc429c031d4 e45876698f77125d3eb1728385add019cbfda497 Your Name <your.email@example.com> 1763518918 +0900	commit: Improve badge card readability

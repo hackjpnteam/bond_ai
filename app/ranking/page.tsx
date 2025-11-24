@@ -23,11 +23,12 @@ export default function RankingPage() {
   const industries = [
     { key: '', label: 'すべて業界' },
     { key: 'AI・機械学習', label: 'AI・機械学習' },
-    { key: 'コンサルティング', label: 'コンサルティング' },
-    { key: 'プラットフォーム', label: 'プラットフォーム' },
-    { key: 'FinTech', label: 'FinTech' },
     { key: 'ヘルステック', label: 'ヘルステック' },
+    { key: 'SaaS・プラットフォーム', label: 'SaaS・プラットフォーム' },
+    { key: '不動産テック', label: '不動産テック' },
+    { key: 'FinTech', label: 'FinTech' },
     { key: 'EdTech', label: 'EdTech' },
+    { key: 'コンサルティング', label: 'コンサルティング' },
     { key: 'エネルギー', label: 'エネルギー' }
   ]
 
@@ -137,38 +138,38 @@ export default function RankingPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-r from-blue-500 to-blue-700 rounded-xl p-6 text-white">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                 <span className="text-sm font-bold">★</span>
               </div>
               <div>
-                <div className="text-2xl font-bold">4.7</div>
+                <div className="text-2xl font-bold">4.5</div>
                 <div className="text-blue-100">平均評価</div>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-r from-emerald-500 to-emerald-700 rounded-xl p-6 text-white">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center font-bold">
                 A
               </div>
               <div>
-                <div className="text-2xl font-bold">100%</div>
+                <div className="text-2xl font-bold">60%</div>
                 <div className="text-emerald-100">総合評価A</div>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-r from-purple-500 to-purple-700 rounded-xl p-6 text-white">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                 <span className="text-sm font-bold">#</span>
               </div>
               <div>
-                <div className="text-2xl font-bold">3</div>
+                <div className="text-2xl font-bold">5</div>
                 <div className="text-purple-100">掲載企業数</div>
               </div>
             </div>

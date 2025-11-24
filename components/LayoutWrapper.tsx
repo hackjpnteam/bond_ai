@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth';
 import TopNav from '@/components/TopNav';
 import AsideNav from '@/components/AsideNav';
 import Footer from '@/components/Footer';
+import { OnboardingBanner } from '@/components/OnboardingBanner';
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
@@ -39,6 +40,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
         </div>
         <AsideNav user={user} />
         <main className="lg:ml-64 pt-16 lg:pt-0">
+          <OnboardingBanner />
           {children}
         </main>
       </div>

@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb';
 import Evaluation from '@/models/Evaluation';
 import User from '@/models/User';
 import UserProfile from '@/models/UserProfile';
+import Notification from '@/models/Notification';
 import mongoose from 'mongoose';
 import { getRelationshipLabel } from '@/lib/relationship';
 
@@ -149,7 +150,7 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
     }
 
     const relationshipTypeNum = Number(relationshipType);
-    if (isNaN(relationshipTypeNum) || relationshipTypeNum < 0 || relationshipTypeNum > 4) {
+    if (isNaN(relationshipTypeNum) || relationshipTypeNum < 0 || relationshipTypeNum > 5) {
       return new Response(
         JSON.stringify({ error: '関係性の値が不正です' }),
         {
@@ -192,10 +193,57 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
 
     await evaluation.save();
 
+    // ユーザーの評価カウントを更新
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $inc: { evaluationCount: 1 } },
+      { new: true }
+    );
+
+    // 1件達成時にトラストマップ開放通知
+    let trustMapJustUnlocked = false;
+    if (updatedUser && updatedUser.evaluationCount === 1) {
+      trustMapJustUnlocked = true;
+
+      const trustMapNotification = new Notification({
+        recipient: userId,
+        type: 'system',
+        title: '信頼ネットワークが開放されました！',
+        message: '1件目の評価を投稿しました。信頼ネットワーク機能が使えるようになりました！あと1件評価すると、全ての機能が開放されます。',
+        data: {
+          type: 'trust_map_unlocked',
+          evaluationCount: 1
+        }
+      });
+      await trustMapNotification.save();
+    }
+
+    // 2件達成時にオンボーディング完了 & 全機能開放通知
+    let onboardingJustCompleted = false;
+    if (updatedUser && updatedUser.evaluationCount >= 2 && !updatedUser.onboardingCompleted) {
+      await User.findByIdAndUpdate(userId, { onboardingCompleted: true });
+      onboardingJustCompleted = true;
+
+      // 全機能開放通知を送信
+      const unlockNotification = new Notification({
+        recipient: userId,
+        type: 'system',
+        title: '全機能が開放されました！',
+        message: '2件の評価を完了しました。これで全ての機能をご利用いただけます。紹介リクエスト、接続管理、メッセージなど、Bondの機能を存分にお楽しみください。',
+        data: {
+          type: 'onboarding_complete',
+          evaluationCount: updatedUser.evaluationCount
+        }
+      });
+      await unlockNotification.save();
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: '評価を投稿しました',
+        message: onboardingJustCompleted
+          ? '評価を投稿しました。全機能が開放されました！'
+          : '評価を投稿しました',
         evaluation: {
           id: evaluation._id.toString(),
           companyName: evaluation.companyName,
@@ -207,7 +255,9 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
           categories: evaluation.categories,
           isAnonymous: evaluation.isAnonymous,
           createdAt: evaluation.createdAt
-        }
+        },
+        onboardingCompleted: onboardingJustCompleted || (updatedUser?.onboardingCompleted ?? false),
+        evaluationCount: updatedUser?.evaluationCount ?? 1
       }),
       {
         status: 201,

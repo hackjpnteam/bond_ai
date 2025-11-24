@@ -197,6 +197,12 @@ export default function NotificationsPage() {
       markAsRead(notification._id)
     }
 
+    // 通知データにURLが指定されている場合はそこに遷移
+    if (notification.data?.url) {
+      window.location.href = notification.data.url
+      return
+    }
+
     // 通知タイプに応じてページ遷移
     if (notification.type === 'message') {
       if (notification.data?.messageId) {

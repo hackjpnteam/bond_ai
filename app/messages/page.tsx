@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import Link from 'next/link'
-import { 
+import {
   Send, Users, Search, MoreVertical, ArrowLeft, MessageCircle, Plus, User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { LockedFeature } from '@/components/OnboardingBanner'
 
 interface User {
   _id: string
@@ -211,30 +212,28 @@ export default function ChatMessagesPage() {
     return otherParticipant?.name.toLowerCase().includes(searchTerm.toLowerCase())
   })
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30 flex items-center justify-center">
-        <div className="text-center">
-          <MessageCircle className="w-8 h-8 animate-pulse mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">チャットを読み込み中...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30">
-      {/* Header */}
-      <div className="bg-white border-b border-ash-line">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="lg:hidden">
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </Link>
-              <h1 className="text-xl font-bold text-gray-900">メッセージ</h1>
-            </div>
-            <Link href="/messages/compose">
+    <LockedFeature featureName="メッセージ">
+      {loading ? (
+        <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30 flex items-center justify-center">
+          <div className="text-center">
+            <MessageCircle className="w-8 h-8 animate-pulse mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">チャットを読み込み中...</p>
+          </div>
+        </div>
+      ) : (
+      <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30">
+        {/* Header */}
+        <div className="bg-white border-b border-ash-line">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard" className="lg:hidden">
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </Link>
+                <h1 className="text-xl font-bold text-gray-900">メッセージ</h1>
+              </div>
+              <Link href="/messages/compose">
               <Button className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="w-4 h-4 mr-2" />
                 新規
@@ -445,5 +444,7 @@ export default function ChatMessagesPage() {
         </div>
       </div>
     </div>
+      )}
+    </LockedFeature>
   )
 }

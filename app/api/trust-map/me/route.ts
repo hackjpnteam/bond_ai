@@ -60,13 +60,14 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
 
   // ノード
   const nodes: any[] = [];
-  // 中心（自分）
+  // 中心（自分）- 他のノードより大きく表示
   nodes.push({
     id: `u:${meId}`,
     type: "person",
     label: me?.name ?? "Me",
     img: me?.avatarUrl,
-    size: 36,
+    size: 48, // 他のノード(14-42)より大きく
+    isMe: true, // 自分のノードであることを示すフラグ
     // 中心固定
     fx: 0,
     fy: 0,

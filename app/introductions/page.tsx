@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { LockedFeature } from '@/components/OnboardingBanner'
 
 interface Introduction {
   id: string
@@ -100,17 +101,6 @@ export default function IntroductionsPage() {
   const receivedIntroductions = introductions.filter(intro => intro.toUser === 'あなた')
   const sentIntroductions = introductions.filter(intro => intro.fromUser === 'あなた')
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">紹介データを読み込み中...</p>
-        </div>
-      </div>
-    )
-  }
-
   const getStatusBadge = (status: Introduction['status']) => {
     switch (status) {
       case 'pending':
@@ -142,14 +132,23 @@ export default function IntroductionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30">
-      {/* Header */}
-      <div className="bg-white border-b border-ash-line">
-        <div className="container-narrow mx-auto px-4 py-6">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4">
-            <ArrowLeft className="w-4 h-4" />
-            ホームに戻る
-          </Link>
+    <LockedFeature featureName="紹介管理">
+      {loading ? (
+        <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">紹介データを読み込み中...</p>
+          </div>
+        </div>
+      ) : (
+      <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30">
+        {/* Header */}
+        <div className="bg-white border-b border-ash-line">
+          <div className="container-narrow mx-auto px-4 py-6">
+            <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4">
+              <ArrowLeft className="w-4 h-4" />
+              ホームに戻る
+            </Link>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">
@@ -399,5 +398,7 @@ export default function IntroductionsPage() {
         )}
       </div>
     </div>
+      )}
+    </LockedFeature>
   )
 }

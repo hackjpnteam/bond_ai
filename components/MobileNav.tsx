@@ -19,6 +19,7 @@ export function MobileNav() {
   }
 
   const menuItems = [
+    { href: '/letter', label: '手紙', icon: Mail },
     { href: '/search', label: '検索', icon: Search },
     { href: '/ranking', label: 'ランキング', icon: Trophy },
     { href: '/timeline', label: 'タイムライン', icon: BarChart3 },

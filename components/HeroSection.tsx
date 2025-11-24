@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, Shield, Video } from 'lucide-react'
+import { ArrowRight, Video } from 'lucide-react'
 import { VideoRatingModal } from '@/components/VideoRatingModal'
 import Link from 'next/link'
 
@@ -18,12 +18,6 @@ export function HeroSection() {
 
             {/* タイトル */}
             <div className="relative z-10 text-center">
-              <div className="animate-fade-in-up flex justify-center">
-                <div className="pill bg-ash-surface2/80 text-ash-text mb-8 border border-ash-line">
-                  <Shield className="w-4 h-4 text-ash-muted" />
-                  <span className="font-medium">信頼経済圏</span>
-                </div>
-              </div>
               
               <h1 className="text-center animate-slide-in-left mb-6 text-3xl md:text-4xl lg:text-5xl font-serif font-bold tracking-wide leading-relaxed">
                 信頼でつながる最適な出会いを。
@@ -56,8 +50,8 @@ export function HeroSection() {
                   無料で始める
                   <ArrowRight className="inline-block w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link href="mailto:info@bond.com?subject=資料請求" className="btn-ol group">
-                  資料請求
+                <Link href="/letter" className="btn-ol group">
+                  はじめに
                 </Link>
               </div>
             </div>

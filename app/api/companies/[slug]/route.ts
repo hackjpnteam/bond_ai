@@ -141,6 +141,8 @@ export async function GET(
           dataSource: dbCompany.dataSource,
           lastEditedBy: dbCompany.lastEditedBy,
           lastEditedAt: dbCompany.lastEditedAt,
+          lastSearchAt: dbCompany.lastSearchAt,
+          sources: dbCompany.sources || [],
           editHistory: dbCompany.editHistory,
           createdAt: dbCompany.createdAt,
           updatedAt: dbCompany.updatedAt

@@ -14,6 +14,7 @@ type N = NodeObject & {
   fx?: number;
   fy?: number;
   meta?: any;
+  isMe?: boolean; // 自分のノードかどうか
 };
 type L = LinkObject & { source: string | N; target: string | N; weight: number };
 
@@ -69,6 +70,15 @@ export default function TrustMapMe() {
           const size = n.size ?? 12;
           const img = images.get(n.id);
 
+          // 自分のノードにはハイライトリングを描画
+          if (n.isMe) {
+            ctx.beginPath();
+            ctx.arc(node.x!, node.y!, size + 4, 0, Math.PI * 2, false);
+            ctx.strokeStyle = "#FF5E9E"; // ボンドピンク
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+
           // 丸くクリップして画像 or 塗り
           ctx.save();
           ctx.beginPath();
@@ -84,11 +94,12 @@ export default function TrustMapMe() {
           }
           ctx.restore();
 
-          // ラベル（拡大時のみ）
-          if (globalScale > 1.1) {
-            ctx.font = `${Math.max(10, 12 / globalScale)}px sans-serif`;
+          // ラベル（自分のノードは常に表示、他は拡大時のみ）
+          if (n.isMe || globalScale > 1.1) {
+            const fontSize = n.isMe ? Math.max(12, 14 / globalScale) : Math.max(10, 12 / globalScale);
+            ctx.font = n.isMe ? `bold ${fontSize}px sans-serif` : `${fontSize}px sans-serif`;
             ctx.textAlign = "center";
-            ctx.fillStyle = "#333";
+            ctx.fillStyle = n.isMe ? "#FF5E9E" : "#333";
             const label = n.label ?? "";
             ctx.fillText(label, node.x!, node.y! + size + 12);
           }

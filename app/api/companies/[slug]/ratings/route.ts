@@ -4,10 +4,10 @@ import { RatingDoc } from '@/lib/models'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
 
     // デモデータを返す（MongoDB接続エラー回避）
     const demoRatings: Record<string, any[]> = {

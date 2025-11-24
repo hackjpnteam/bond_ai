@@ -16,11 +16,78 @@ import { useAuth } from '@/lib/auth'
 // 役職の日本語マッピング
 const roleMapping = {
   founder: '創業者',
-  investor: '投資家', 
+  investor: '投資家',
   employee: '従業員',
   advisor: 'アドバイザー',
   other: 'その他'
 }
+
+// バッジ定義
+interface BadgeDefinition {
+  id: string
+  name: string
+  description: string
+  requirement: number
+  icon: 'award' | 'users' | 'messageCircle' | 'trendingUp' | 'star'
+  color: string
+  checkFn: (stats: UserStats) => boolean
+}
+
+interface UserStats {
+  evaluationCount: number    // 評価した企業数
+  totalReviews: number       // 総評価件数
+  connectionCount: number    // 接続数
+  trustScore: number         // 信頼スコア
+  monthlyEvaluations: number // 今月の評価数
+}
+
+const badgeDefinitions: BadgeDefinition[] = [
+  {
+    id: 'evaluation-king',
+    name: '評価王',
+    description: '10社評価',
+    requirement: 10,
+    icon: 'award',
+    color: 'yellow',
+    checkFn: (stats) => stats.evaluationCount >= 10
+  },
+  {
+    id: 'networker',
+    name: 'ネットワーカー',
+    description: '50人接続',
+    requirement: 50,
+    icon: 'users',
+    color: 'blue',
+    checkFn: (stats) => stats.connectionCount >= 50
+  },
+  {
+    id: 'reviewer',
+    name: 'レビュアー',
+    description: '25件投稿',
+    requirement: 25,
+    icon: 'messageCircle',
+    color: 'purple',
+    checkFn: (stats) => stats.totalReviews >= 25
+  },
+  {
+    id: 'early-adopter',
+    name: '早期発見者',
+    description: '初月に5社評価',
+    requirement: 5,
+    icon: 'trendingUp',
+    color: 'green',
+    checkFn: (stats) => stats.monthlyEvaluations >= 5
+  },
+  {
+    id: 'trust-master',
+    name: '信頼マスター',
+    description: '信頼スコア80以上',
+    requirement: 80,
+    icon: 'star',
+    color: 'orange',
+    checkFn: (stats) => stats.trustScore >= 80
+  }
+]
 
 // 最近の活動は動的に生成
 
@@ -30,6 +97,7 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const [evaluatedCompanies, setEvaluatedCompanies] = useState<any[]>([])
   const [searchHistory, setSearchHistory] = useState<any[]>([])
+  const [connectionCount, setConnectionCount] = useState(0)
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -115,12 +183,27 @@ export default function DashboardPage() {
       }
     };
 
+    // 接続数を取得
+    const loadConnectionCount = async () => {
+      try {
+        const response = await fetch('/api/connections?status=accepted', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setConnectionCount(data.stats?.accepted || 0);
+        }
+      } catch (e) {
+        console.error('Error loading connection count:', e);
+      }
+    };
+
     const loadData = async () => {
       if (user) {
         setIsLoadingData(true);
         setError(null);
         try {
-          await Promise.all([loadEvaluationHistory(), loadSearchHistory()]);
+          await Promise.all([loadEvaluationHistory(), loadSearchHistory(), loadConnectionCount()]);
         } catch (e) {
           console.error('Error loading dashboard data:', e);
           setError('データの読み込みに失敗しました');
@@ -309,69 +392,96 @@ export default function DashboardPage() {
                 獲得バッジ
               </CardTitle>
               <CardDescription>
-                あなたの実績と成果を表すバッジコレクション
+                <Link href="/features#badges" className="text-blue-600 hover:text-blue-700 hover:underline">
+                  バッジ獲得条件を見る →
+                </Link>
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-2 relative">
-                    <Award className="w-8 h-8 text-yellow-600" />
-                    <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      ✓
+              {(() => {
+                // ユーザー統計を計算
+                const totalReviews = evaluatedCompanies.reduce(
+                  (sum, company) => sum + company.evaluations.length,
+                  0
+                );
+                const thisMonth = new Date().getMonth();
+                const thisYear = new Date().getFullYear();
+                const monthlyEvaluations = evaluatedCompanies.reduce((count, company) => {
+                  return count + company.evaluations.filter((e: any) => {
+                    const evalDate = new Date(e.timestamp);
+                    return evalDate.getMonth() === thisMonth && evalDate.getFullYear() === thisYear;
+                  }).length;
+                }, 0);
+
+                const userStats: UserStats = {
+                  evaluationCount: evaluatedCompanies.length,
+                  totalReviews,
+                  connectionCount,
+                  trustScore: 0, // TODO: 信頼スコアAPIから取得
+                  monthlyEvaluations
+                };
+
+                const getIconComponent = (iconType: string, isEarned: boolean) => {
+                  const colorClass = isEarned ? '' : 'text-gray-400';
+                  switch (iconType) {
+                    case 'award':
+                      return <Award className={`w-8 h-8 ${isEarned ? 'text-yellow-600' : colorClass}`} />;
+                    case 'users':
+                      return <Users className={`w-8 h-8 ${isEarned ? 'text-blue-600' : colorClass}`} />;
+                    case 'messageCircle':
+                      return <MessageCircle className={`w-8 h-8 ${isEarned ? 'text-purple-600' : colorClass}`} />;
+                    case 'trendingUp':
+                      return <TrendingUp className={`w-8 h-8 ${isEarned ? 'text-green-600' : colorClass}`} />;
+                    case 'star':
+                      return <Star className={`w-8 h-8 ${isEarned ? 'text-orange-600' : colorClass}`} />;
+                    default:
+                      return <Award className={`w-8 h-8 ${colorClass}`} />;
+                  }
+                };
+
+                const getBgColor = (color: string, isEarned: boolean) => {
+                  if (!isEarned) return 'bg-gray-100';
+                  switch (color) {
+                    case 'yellow': return 'bg-yellow-100';
+                    case 'blue': return 'bg-blue-100';
+                    case 'purple': return 'bg-purple-100';
+                    case 'green': return 'bg-green-100';
+                    case 'orange': return 'bg-orange-100';
+                    default: return 'bg-gray-100';
+                  }
+                };
+
+                const earnedBadges = badgeDefinitions.filter(badge => badge.checkFn(userStats));
+
+                if (earnedBadges.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-gray-500">
+                      <Award className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>まだ獲得したバッジはありません</p>
+                      <Link href="/features#badges" className="text-sm mt-2 text-blue-600 hover:text-blue-700 hover:underline inline-block">
+                        バッジ獲得条件を確認する →
+                      </Link>
                     </div>
-                  </div>
-                  <p className="text-xs font-medium">評価王</p>
-                  <p className="text-xs text-gray-500">10社評価</p>
-                </div>
+                  );
+                }
 
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2 relative">
-                    <Users className="w-8 h-8 text-blue-600" />
-                    <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      ✓
-                    </div>
+                return (
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+                    {earnedBadges.map((badge) => (
+                      <div key={badge.id} className="text-center">
+                        <div className={`w-16 h-16 ${getBgColor(badge.color, true)} rounded-full flex items-center justify-center mx-auto mb-2 relative`}>
+                          {getIconComponent(badge.icon, true)}
+                          <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            ✓
+                          </div>
+                        </div>
+                        <p className="text-xs font-medium">{badge.name}</p>
+                        <p className="text-xs text-gray-500">{badge.description}</p>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-xs font-medium">ネットワーカー</p>
-                  <p className="text-xs text-gray-500">50人接続</p>
-                </div>
-
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2 relative">
-                    <MessageCircle className="w-8 h-8 text-purple-600" />
-                    <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      ✓
-                    </div>
-                  </div>
-                  <p className="text-xs font-medium">レビュアー</p>
-                  <p className="text-xs text-gray-500">25件投稿</p>
-                </div>
-
-                <div className="text-center opacity-50">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <TrendingUp className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-xs font-medium">早期発見者</p>
-                  <p className="text-xs text-gray-500">未獲得</p>
-                </div>
-
-                <div className="text-center opacity-50">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <Star className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-xs font-medium">信頼マスター</p>
-                  <p className="text-xs text-gray-500">未獲得</p>
-                </div>
-
-                <div className="text-center">
-                  <Link href="/features" className="block hover:opacity-80 transition-opacity">
-                    <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-2xl font-bold text-gray-500">+9</span>
-                    </div>
-                    <p className="text-xs font-medium text-blue-600">もっと見る</p>
-                  </Link>
-                </div>
-              </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
@@ -754,24 +864,79 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-                    <Award className="w-6 h-6 text-yellow-600 mx-auto mb-1" />
-                    <p className="text-xs font-medium text-yellow-800">評価王</p>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-blue-50 border border-blue-200">
-                    <Users className="w-6 h-6 text-blue-600 mx-auto mb-1" />
-                    <p className="text-xs font-medium text-blue-800">ネットワーカー</p>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-green-50 border border-green-200">
-                    <TrendingUp className="w-6 h-6 text-green-600 mx-auto mb-1" />
-                    <p className="text-xs font-medium text-green-800">早期発見者</p>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-purple-50 border border-purple-200">
-                    <MessageCircle className="w-6 h-6 text-purple-600 mx-auto mb-1" />
-                    <p className="text-xs font-medium text-purple-800">レビュアー</p>
-                  </div>
-                </div>
+                {(() => {
+                  // ユーザー統計を計算
+                  const totalReviews = evaluatedCompanies.reduce(
+                    (sum, company) => sum + company.evaluations.length,
+                    0
+                  );
+                  const thisMonth = new Date().getMonth();
+                  const thisYear = new Date().getFullYear();
+                  const monthlyEvaluations = evaluatedCompanies.reduce((count, company) => {
+                    return count + company.evaluations.filter((e: any) => {
+                      const evalDate = new Date(e.timestamp);
+                      return evalDate.getMonth() === thisMonth && evalDate.getFullYear() === thisYear;
+                    }).length;
+                  }, 0);
+
+                  const userStats: UserStats = {
+                    evaluationCount: evaluatedCompanies.length,
+                    totalReviews,
+                    connectionCount,
+                    trustScore: 0,
+                    monthlyEvaluations
+                  };
+
+                  const earnedBadges = badgeDefinitions.filter(badge => badge.checkFn(userStats));
+
+                  const getBadgeStyle = (color: string) => {
+                    switch (color) {
+                      case 'yellow': return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800', icon: 'text-yellow-600' };
+                      case 'blue': return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', icon: 'text-blue-600' };
+                      case 'purple': return { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800', icon: 'text-purple-600' };
+                      case 'green': return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800', icon: 'text-green-600' };
+                      case 'orange': return { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', icon: 'text-orange-600' };
+                      default: return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', icon: 'text-gray-600' };
+                    }
+                  };
+
+                  const getIcon = (iconType: string, iconClass: string) => {
+                    switch (iconType) {
+                      case 'award': return <Award className={`w-6 h-6 ${iconClass} mx-auto mb-1`} />;
+                      case 'users': return <Users className={`w-6 h-6 ${iconClass} mx-auto mb-1`} />;
+                      case 'messageCircle': return <MessageCircle className={`w-6 h-6 ${iconClass} mx-auto mb-1`} />;
+                      case 'trendingUp': return <TrendingUp className={`w-6 h-6 ${iconClass} mx-auto mb-1`} />;
+                      case 'star': return <Star className={`w-6 h-6 ${iconClass} mx-auto mb-1`} />;
+                      default: return <Award className={`w-6 h-6 ${iconClass} mx-auto mb-1`} />;
+                    }
+                  };
+
+                  if (earnedBadges.length === 0) {
+                    return (
+                      <div className="text-center py-4 text-gray-500">
+                        <Award className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">まだバッジがありません</p>
+                        <Link href="/features#badges" className="text-xs text-blue-600 hover:text-blue-700 hover:underline mt-1 inline-block">
+                          獲得条件を見る
+                        </Link>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-3">
+                      {earnedBadges.slice(0, 4).map((badge) => {
+                        const style = getBadgeStyle(badge.color);
+                        return (
+                          <div key={badge.id} className={`text-center p-3 rounded-lg ${style.bg} border ${style.border}`}>
+                            {getIcon(badge.icon, style.icon)}
+                            <p className={`text-xs font-medium ${style.text}`}>{badge.name}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>

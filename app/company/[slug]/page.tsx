@@ -6,12 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, Building2, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search } from 'lucide-react';
+import { Star, Building2, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check } from 'lucide-react';
 import Link from 'next/link';
-import Head from 'next/head';
-import { Metadata } from 'next';
 import { getUserDisplayName } from '@/lib/user-display';
 import { getRelationshipLabel, RELATIONSHIP_OPTIONS, RELATIONSHIP_TYPES } from '@/lib/relationship';
+import { CompanyOverview } from '@/components/company/CompanyOverview';
 import ReactMarkdown from 'react-markdown';
 
 interface Evaluation {
@@ -38,6 +37,20 @@ interface SearchResultData {
   createdAt: string;
 }
 
+interface RelatedCompany {
+  name: string;
+  slug: string;
+  industry: string;
+  averageRating: number;
+  searchCount: number;
+}
+
+interface SourceInfo {
+  url: string;
+  title?: string;
+  published_at?: string;
+}
+
 interface CompanyData {
   name: string;
   industry: string;
@@ -50,6 +63,7 @@ interface CompanyData {
   searchCount: number;
   editHistory?: EditHistoryEntry[];
   searchResults?: SearchResultData[];
+  sources?: SourceInfo[];
 }
 
 interface EditHistoryEntry {
@@ -79,6 +93,7 @@ export default function CompanyPage() {
   const [isPerson, setIsPerson] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResultData[]>([]);
+  const [relatedCompanies, setRelatedCompanies] = useState<RelatedCompany[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const canUseRealIdentity = Boolean(currentUser?.id);
   const realIdentityLabel = canUseRealIdentity
@@ -92,6 +107,7 @@ export default function CompanyPage() {
   const [editReason, setEditReason] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const LEGACY_RELATIONSHIP_MAP: Record<string, number> = {
     shareholder: RELATIONSHIP_TYPES.INVESTOR,
@@ -181,8 +197,8 @@ export default function CompanyPage() {
         console.error('Error fetching company data:', error);
       }
 
-      // 検索結果データ（MongoDBデータがある場合は参照のみ）
-      const apiSearchResults = companyApiData ? [] : await fetchSearchResults();
+      // 検索結果データ（常に取得して最新の検索レポートを表示）
+      const apiSearchResults = await fetchSearchResults();
       
       // APIから評価データを取得
       let evaluations: Evaluation[] = [];
@@ -308,16 +324,204 @@ export default function CompanyPage() {
       // 編集履歴はAPIデータから取得（ローカルストレージから削除）
       let editHistory: EditHistoryEntry[] = companyApiData?.editHistory || [];
 
-      // 会社データを設定（MongoDBデータが存在する場合は絶対優先）
+      // 検索結果から最新のレポート内容とウェブサイトURL、設立年、従業員数を取得
+      let searchReportDescription = '';
+      let extractedWebsiteUrl = '';
+      let extractedFounded = '';
+      let extractedEmployees = '';
+      let extractedIndustry = '';
+      let extractedSources: SourceInfo[] = [];
+
+      if (apiSearchResults && apiSearchResults.length > 0) {
+        const matchingResult = apiSearchResults.find((result: any) =>
+          result.company?.toLowerCase() === companyName.toLowerCase() ||
+          result.query?.toLowerCase() === companyName.toLowerCase()
+        );
+        if (matchingResult) {
+          // 説明文の抽出
+          if (matchingResult.answer) {
+            // JSONブロックやマークダウンコードブロックを除去
+            let cleanAnswer = matchingResult.answer;
+            cleanAnswer = cleanAnswer.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+            // JSONオブジェクト部分を抽出してanswerフィールドを取得
+            try {
+              const jsonMatch = cleanAnswer.match(/\{[\s\S]*"answer"\s*:\s*"([^"]+)"[\s\S]*\}/);
+              if (jsonMatch && jsonMatch[1]) {
+                cleanAnswer = jsonMatch[1].replace(/\\n/g, '\n');
+              }
+            } catch (e) {
+              // JSON解析に失敗した場合はそのまま使用
+            }
+            searchReportDescription = cleanAnswer;
+
+            // レポートテキストから設立年を抽出
+            const foundedPatterns = [
+              /設立[：:\s]*(\d{4})年/,
+              /(\d{4})年[に]?設立/,
+              /創業[：:\s]*(\d{4})年/,
+              /(\d{4})年[に]?創業/,
+              /founded[:\s]*(\d{4})/i
+            ];
+            for (const pattern of foundedPatterns) {
+              const match = cleanAnswer.match(pattern);
+              if (match && match[1]) {
+                extractedFounded = `${match[1]}年`;
+                break;
+              }
+            }
+
+            // レポートテキストから従業員数を抽出
+            const employeePatterns = [
+              /従業員[数]?[：:\s]*約?(\d+)[名人]/,
+              /社員[数]?[：:\s]*約?(\d+)[名人]/,
+              /約?(\d+)[名人]の?(従業員|社員|エンジニア)/,
+              /employees[:\s]*(\d+)/i
+            ];
+            for (const pattern of employeePatterns) {
+              const match = cleanAnswer.match(pattern);
+              if (match && match[1]) {
+                extractedEmployees = `${match[1]}名`;
+                break;
+              }
+            }
+
+            // レポートテキストから業界を抽出
+            const industryPatterns = [
+              /業[界種][：:\s]*([^、\n]+)/,
+              /事業内容[：:\s]*([^、\n]+)/
+            ];
+            for (const pattern of industryPatterns) {
+              const match = cleanAnswer.match(pattern);
+              if (match && match[1]) {
+                extractedIndustry = match[1].trim().substring(0, 30);
+                break;
+              }
+            }
+          }
+
+          // metadata.factsから情報を抽出（より優先度高い）
+          const facts = matchingResult.metadata?.facts || [];
+          if (Array.isArray(facts)) {
+            for (const fact of facts) {
+              const label = (fact.label || '').toLowerCase();
+              const value = fact.value || '';
+
+              if (label.includes('設立') || label.includes('創業') || label.includes('founded')) {
+                if (value && value !== '—') {
+                  extractedFounded = value;
+                }
+              }
+              if (label.includes('従業員') || label.includes('社員') || label.includes('employee')) {
+                if (value && value !== '—') {
+                  extractedEmployees = value;
+                }
+              }
+              if (label.includes('業界') || label.includes('業種') || label.includes('industry')) {
+                if (value && value !== '—') {
+                  extractedIndustry = value;
+                }
+              }
+              if (label.includes('ウェブサイト') || label.includes('website') || label.includes('url') || label.includes('公式')) {
+                if (value && value !== '—' && value.startsWith('http')) {
+                  extractedWebsiteUrl = value;
+                }
+              }
+            }
+          }
+
+          // sources は metadata.sources または直接 sources にある場合がある
+          const sourcesArray = matchingResult.metadata?.sources || matchingResult.sources || [];
+
+          // 参考サイトを抽出して保存
+          if (Array.isArray(sourcesArray) && sourcesArray.length > 0) {
+            extractedSources = sourcesArray.map((source: any) => {
+              const url = source.url || source.link || (typeof source === 'string' ? source : '');
+              return {
+                url: url,
+                title: source.title || '',
+                published_at: source.published_at || source.publishedAt || ''
+              };
+            }).filter((s: SourceInfo) => s.url && s.url.startsWith('http'));
+          }
+
+          // 検索結果からウェブサイトURLを抽出（factsで見つからない場合）
+          if (!extractedWebsiteUrl) {
+            if (Array.isArray(sourcesArray) && sourcesArray.length > 0) {
+              // SNSやニュースサイトを除外して公式サイトらしいURLを探す
+              const excludedDomains = [
+                'twitter.com', 'x.com', 'facebook.com', 'linkedin.com', 'instagram.com',
+                'youtube.com', 'prtimes.jp', 'note.com', 'wantedly.com', 'wikipedia.org',
+                'news.yahoo.co.jp', 'google.com', 'amazon.co.jp', 'rakuten.co.jp',
+                'recruit.co.jp', 'green-japan.com', 'en-japan.com', 'doda.jp'
+              ];
+
+              // 会社の公式サイトらしいURLを探す
+              const officialSite = sourcesArray.find((source: any) => {
+                const url = source.url || source.link || source;
+                if (typeof url !== 'string') return false;
+                try {
+                  const domain = new URL(url).hostname.toLowerCase();
+                  // 除外ドメインをチェック
+                  if (excludedDomains.some(d => domain.includes(d))) return false;
+                  return true;
+                } catch {
+                  return false;
+                }
+              });
+
+              if (officialSite) {
+                extractedWebsiteUrl = officialSite.url || officialSite.link || officialSite;
+              }
+            }
+          }
+
+          // metadataにurlフィールドがある場合も確認
+          if (!extractedWebsiteUrl && matchingResult.metadata?.url) {
+            extractedWebsiteUrl = matchingResult.metadata.url;
+          }
+
+          // bondPageUrlがある場合は除外（Bond内部リンク）
+          if (extractedWebsiteUrl && (extractedWebsiteUrl.includes('localhost') || extractedWebsiteUrl.includes('bond'))) {
+            extractedWebsiteUrl = '';
+          }
+
+          console.log('Extracted from search results:', {
+            founded: extractedFounded,
+            employees: extractedEmployees,
+            website: extractedWebsiteUrl,
+            industry: extractedIndustry
+          });
+        }
+      }
+
+      // 会社データを設定（検索結果から抽出したデータを優先的に使用）
+      // DBに「情報収集中」などの仮データがある場合は検索結果から抽出したものを使用
+      const isPlaceholder = (val: string | undefined) => {
+        if (!val) return true;
+        return val === '情報収集中' || val === '情報収集中...' || val === '—' || val === '-';
+      };
+
       if (companyApiData) {
-        console.log('Using MongoDB data exclusively for:', companyApiData.name);
+        console.log('Using MongoDB data for:', companyApiData.name);
+        // MongoDBの説明文を優先、なければ検索レポート、最後にフォールバック
+        const finalDescription = companyApiData.description && companyApiData.description.length > 50
+          ? companyApiData.description
+          : (searchReportDescription || fallbackDescription);
+        // 検索結果から抽出したデータをDBデータより優先（DBが空またはプレースホルダーの場合）
+        const finalFounded = isPlaceholder(companyApiData.founded) ? extractedFounded : companyApiData.founded;
+        const finalEmployees = isPlaceholder(companyApiData.employees) ? extractedEmployees : companyApiData.employees;
+        const finalWebsite = isPlaceholder(companyApiData.website) ? extractedWebsiteUrl : companyApiData.website;
+        const finalIndustry = isPlaceholder(companyApiData.industry) ? extractedIndustry : companyApiData.industry;
+        // sourcesも検索結果から抽出したものがなければMongoDBから取得
+        const finalSources = extractedSources.length > 0 ? extractedSources : (companyApiData.sources || []);
+
         setCompanyData({
           name: companyApiData.name,
-          industry: companyApiData.industry,
-          description: companyApiData.description,
-          founded: companyApiData.founded,
-          employees: companyApiData.employees,
-          website: companyApiData.website || '',
+          industry: finalIndustry || '情報収集中...',
+          description: finalDescription,
+          founded: finalFounded || '情報収集中',
+          employees: finalEmployees || '情報収集中',
+          website: finalWebsite || '',
           evaluations,
           averageRating: evaluations.length > 0
             ? averageRating
@@ -326,26 +530,42 @@ export default function CompanyPage() {
                 : 0),
           searchCount: companyApiData.searchCount,
           editHistory,
-          searchResults: []
+          searchResults: apiSearchResults,
+          sources: finalSources
         });
       } else {
         console.log('Using fallback data for:', companyName);
+        const finalDescription = searchReportDescription || fallbackDescription;
         setCompanyData({
           name: companyName,
-          industry: '情報収集中...',
-          description: fallbackDescription,
-          founded: '情報収集中',
-          employees: '情報収集中',
-          website: '',
+          industry: extractedIndustry || '情報収集中...',
+          description: finalDescription,
+          founded: extractedFounded || '情報収集中',
+          employees: extractedEmployees || '情報収集中',
+          website: extractedWebsiteUrl || '',
           evaluations,
           averageRating: averageRating,
           searchCount: searchCount,
           editHistory: [],
-          searchResults: apiSearchResults
+          searchResults: apiSearchResults,
+          sources: extractedSources
         });
       }
 
       setLoading(false);
+
+      // 関連企業を取得
+      try {
+        const relatedResponse = await fetch(`/api/companies/${companyName.toLowerCase()}/related`);
+        if (relatedResponse.ok) {
+          const relatedData = await relatedResponse.json();
+          if (relatedData.success) {
+            setRelatedCompanies(relatedData.relatedCompanies || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching related companies:', error);
+      }
     };
 
     loadCompanyData();
@@ -466,7 +686,7 @@ export default function CompanyPage() {
 
     // フォームをリセット
     setRating(0);
-    setRelationship('');
+    setRelationshipType('');
     setComment('');
     setIsAnonymous(false);
     setShowEvaluationForm(false);
@@ -607,11 +827,9 @@ export default function CompanyPage() {
         setIsEditing(false);
         
         alert('企業情報をデータベースに保存しました');
-        
-        // データを再取得して最新状態を確保
-        setTimeout(() => {
-          loadCompanyData();
-        }, 500);
+
+        // ページをリロードして最新状態を確保
+        window.location.reload();
       } else {
         const errorData = await response.json();
         alert(`保存に失敗しました: ${errorData.error}`);
@@ -719,6 +937,160 @@ export default function CompanyPage() {
     setIsSaved(!isSaved);
   };
 
+  // レポートをクリップボードにコピー
+  const handleCopyReport = async () => {
+    if (!companyData) return;
+
+    const latestReport = searchResults[0]?.answer || '';
+    const reportText = `# ${companyData.name} - 企業レポート
+
+## 基本情報
+- 会社名: ${companyData.name}
+- 業界: ${companyData.industry}
+- 設立: ${companyData.founded || '不明'}
+- 従業員数: ${companyData.employees || '不明'}
+- ウェブサイト: ${companyData.website || '不明'}
+
+## 企業概要
+${companyData.description || '情報なし'}
+
+## AIレポート
+${latestReport || '最新のAIレポートはありません。'}
+
+## Bond評価
+- 平均評価: ${companyData.averageRating.toFixed(1)} / 5.0
+- レビュー数: ${companyData.evaluations.length}件
+
+---
+Generated by Bond AI - ${new Date().toLocaleDateString('ja-JP')}
+URL: ${window.location.href}`;
+
+    try {
+      await navigator.clipboard.writeText(reportText);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      alert('コピーに失敗しました');
+    }
+  };
+
+  // PDFとしてエクスポート
+  const handleExportPDF = async () => {
+    if (!companyData) return;
+
+    const latestReport = searchResults[0]?.answer || '';
+
+    // HTML形式でレポートを作成
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>${companyData.name} - 企業レポート</title>
+  <style>
+    body {
+      font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px;
+      line-height: 1.8;
+      color: #333;
+    }
+    h1 {
+      color: #1a1a1a;
+      border-bottom: 3px solid #FF5E9E;
+      padding-bottom: 10px;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #444;
+      margin-top: 30px;
+      border-left: 4px solid #FF5E9E;
+      padding-left: 12px;
+    }
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    .info-table td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .info-table td:first-child {
+      font-weight: bold;
+      width: 120px;
+      color: #666;
+    }
+    .rating {
+      background: linear-gradient(135deg, #FFF3F8, #FFE4EC);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+    .rating-stars { color: #FFD700; font-size: 20px; }
+    .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+    }
+    .ai-report {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>${companyData.name}</h1>
+
+  <h2>基本情報</h2>
+  <table class="info-table">
+    <tr><td>業界</td><td>${companyData.industry}</td></tr>
+    <tr><td>設立</td><td>${companyData.founded || '不明'}</td></tr>
+    <tr><td>従業員数</td><td>${companyData.employees || '不明'}</td></tr>
+    <tr><td>ウェブサイト</td><td>${companyData.website || '不明'}</td></tr>
+  </table>
+
+  <h2>企業概要</h2>
+  <p>${companyData.description || '情報なし'}</p>
+
+  ${latestReport ? `
+  <h2>AIレポート</h2>
+  <div class="ai-report">${latestReport.replace(/\n/g, '<br>')}</div>
+  ` : ''}
+
+  <h2>Bond評価</h2>
+  <div class="rating">
+    <div class="rating-stars">${'★'.repeat(Math.round(companyData.averageRating))}${'☆'.repeat(5 - Math.round(companyData.averageRating))}</div>
+    <p><strong>${companyData.averageRating.toFixed(1)}</strong> / 5.0 （${companyData.evaluations.length}件のレビュー）</p>
+  </div>
+
+  <div class="footer">
+    <p>Generated by Bond AI - ${new Date().toLocaleDateString('ja-JP')}</p>
+    <p>${window.location.href}</p>
+  </div>
+</body>
+</html>`;
+
+    // 新しいウィンドウを開いて印刷ダイアログを表示
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    } else {
+      alert('ポップアップがブロックされました。ブラウザの設定を確認してください。');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
@@ -744,225 +1116,8 @@ export default function CompanyPage() {
     evaluation => evaluation.userId === currentUserId
   );
 
-  // SEO用のヘルパー関数
-  const generateMetaDescription = (data: CompanyData): string => {
-    const ratingText = data.evaluations.length > 0 
-      ? `平均評価${data.averageRating.toFixed(1)}点（${data.evaluations.length}件の評価）`
-      : '評価募集中';
-    
-    const description = data.description.length > 100 
-      ? data.description.substring(0, 100) + '...'
-      : data.description;
-    
-    return `${data.name}の企業評価・レビューをBondで確認。${ratingText}。${description} 実際の関係者による信頼性の高い評価をお届けします。`;
-  };
-
-  const generateKeywords = (data: CompanyData): string => {
-    return [
-      data.name,
-      `${data.name} 評価`,
-      `${data.name} レビュー`,
-      `${data.name} 企業情報`,
-      `${data.name} 口コミ`,
-      data.industry,
-      '企業評価',
-      'スタートアップ',
-      '投資判断',
-      'Bond',
-      '企業分析'
-    ].join(', ');
-  };
-
-  const generateOGImage = (data: CompanyData): string => {
-    // 動的OG画像生成のURL（実装時にはVercel OG Image Generationなどを使用）
-    const params = new URLSearchParams({
-      name: data.name,
-      rating: data.averageRating.toFixed(1),
-      count: data.evaluations.length.toString(),
-      industry: data.industry
-    });
-    return `https://bond.ai/api/og/company?${params.toString()}`;
-  };
-
-  const getLastModified = (data: CompanyData): string => {
-    const latestEvaluation = data.evaluations.length > 0 
-      ? Math.max(...data.evaluations.map(e => e.timestamp))
-      : Date.now();
-    return new Date(latestEvaluation).toISOString();
-  };
-
-  const generateStructuredData = (data: CompanyData) => {
-    return {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": data.name,
-      "description": data.description,
-      "url": `https://bond.ai/company/${encodeURIComponent(companyName)}`,
-      "logo": generateOGImage(data),
-      "foundingDate": data.founded !== '情報収集中' ? data.founded : undefined,
-      "numberOfEmployees": data.employees !== '情報収集中' ? data.employees : undefined,
-      "industry": data.industry,
-      "aggregateRating": data.evaluations.length > 0 ? {
-        "@type": "AggregateRating",
-        "ratingValue": data.averageRating,
-        "reviewCount": data.evaluations.length,
-        "bestRating": 5,
-        "worstRating": 1,
-        "ratingCount": data.evaluations.length
-      } : undefined,
-      "review": data.evaluations.slice(0, 10).map(evaluation => ({
-        "@type": "Review",
-        "author": {
-          "@type": "Person",
-          "name": getUserDisplayName(evaluation.userId)
-        },
-        "reviewRating": {
-          "@type": "Rating",
-          "ratingValue": evaluation.rating,
-          "bestRating": 5,
-          "worstRating": 1
-        },
-        "reviewBody": evaluation.comment,
-        "datePublished": new Date(evaluation.timestamp).toISOString(),
-        "publisher": {
-          "@type": "Organization",
-          "name": "Bond"
-        }
-      })),
-      "sameAs": data.website ? [data.website] : undefined
-    };
-  };
-
-  const generateReviewsStructuredData = (data: CompanyData) => {
-    if (data.evaluations.length === 0) return {};
-    
-    return {
-      "@context": "https://schema.org",
-      "@type": "ItemList",
-      "name": `${data.name}の評価・レビュー`,
-      "description": `${data.name}に関する${data.evaluations.length}件の評価とレビュー`,
-      "numberOfItems": data.evaluations.length,
-      "itemListElement": data.evaluations.map((evaluation, index) => ({
-        "@type": "ListItem",
-        "position": index + 1,
-        "item": {
-          "@type": "Review",
-          "name": `${data.name}の評価 - ${evaluation.rating}星`,
-          "author": {
-            "@type": "Person",
-            "name": getUserDisplayName(evaluation.userId)
-          },
-          "reviewRating": {
-            "@type": "Rating",
-            "ratingValue": evaluation.rating,
-            "bestRating": 5,
-            "worstRating": 1
-          },
-          "reviewBody": evaluation.comment,
-          "datePublished": new Date(evaluation.timestamp).toISOString(),
-          "itemReviewed": {
-            "@type": "Organization",
-            "name": data.name
-          }
-        }
-      }))
-    };
-  };
-
-  const generateBreadcrumbStructuredData = (data: CompanyData) => {
-    return {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Bond",
-          "item": "https://bond.ai"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "企業一覧",
-          "item": "https://bond.ai/companies"
-        },
-        {
-          "@type": "ListItem",
-          "position": 3,
-          "name": data.name,
-          "item": `https://bond.ai/company/${encodeURIComponent(companyName)}`
-        }
-      ]
-    };
-  };
-
   return (
-    <>
-      <Head>
-        {/* 基本的なメタタグ */}
-        <title>{companyData.name} - 企業評価・レビュー | Bond</title>
-        <meta name="description" content={generateMetaDescription(companyData)} />
-        <meta name="keywords" content={generateKeywords(companyData)} />
-        <meta name="author" content="Bond" />
-        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-        
-        {/* Open Graph タグ */}
-        <meta property="og:type" content="organization" />
-        <meta property="og:title" content={`${companyData.name} - 企業評価・レビュー | Bond`} />
-        <meta property="og:description" content={generateMetaDescription(companyData)} />
-        <meta property="og:url" content={`https://bond.ai/company/${encodeURIComponent(companyName)}`} />
-        <meta property="og:site_name" content="Bond" />
-        <meta property="og:image" content={generateOGImage(companyData)} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content={`${companyData.name}の企業評価`} />
-        <meta property="og:locale" content="ja_JP" />
-        
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${companyData.name} - 企業評価・レビュー | Bond`} />
-        <meta name="twitter:description" content={generateMetaDescription(companyData)} />
-        <meta name="twitter:image" content={generateOGImage(companyData)} />
-        <meta name="twitter:site" content="@BondAI" />
-        
-        {/* 追加のSEOタグ */}
-        <link rel="canonical" href={`https://bond.ai/company/${encodeURIComponent(companyName)}`} />
-        <meta name="rating" content={companyData.averageRating.toString()} />
-        <meta name="review-count" content={companyData.evaluations.length.toString()} />
-        <meta name="company-industry" content={companyData.industry} />
-        <meta name="last-modified" content={getLastModified(companyData)} />
-        
-        {/* 検索エンジン向け地域情報 */}
-        <meta name="geo.region" content="JP" />
-        <meta name="geo.country" content="Japan" />
-        <meta name="language" content="Japanese" />
-        
-        {/* 構造化データ（JSON-LD） - 拡張版 */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(generateStructuredData(companyData))
-          }}
-        />
-        
-        {/* 評価用の追加構造化データ */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(generateReviewsStructuredData(companyData))
-          }}
-        />
-        
-        {/* パンくずリスト構造化データ */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(generateBreadcrumbStructuredData(companyData))
-          }}
-        />
-      </Head>
-
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
         {/* ヘッダー */}
         <div className="bg-white border-b border-border">
           <div className="container max-w-screen-xl mx-auto px-4 md:px-6 py-6">
@@ -999,7 +1154,7 @@ export default function CompanyPage() {
                     <h1 className="text-2xl md:text-3xl font-bold text-foreground">{companyData.name}</h1>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="text-muted-foreground">{companyData.industry}</p>
+                    <p className="text-gray-600">{companyData.industry}</p>
                   </div>
                 </div>
               </div>
@@ -1019,13 +1174,35 @@ export default function CompanyPage() {
                   <Share2 className="w-4 h-4 mr-1" />
                   シェア
                 </Button>
-                <Button 
-                  variant={isSaved ? "default" : "outline"} 
-                  size="sm" 
+                <Button
+                  variant={isSaved ? "default" : "outline"}
+                  size="sm"
                   onClick={handleSave}
                 >
                   <BookmarkPlus className="w-4 h-4 mr-1" />
                   {isSaved ? '保存済み' : '保存'}
+                </Button>
+                <Button
+                  variant={isCopied ? "default" : "outline"}
+                  size="sm"
+                  onClick={handleCopyReport}
+                  className={isCopied ? "bg-green-500 hover:bg-green-600" : ""}
+                >
+                  {isCopied ? (
+                    <>
+                      <Check className="w-4 h-4 mr-1" />
+                      コピー済み
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-1" />
+                      コピー
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                  <FileDown className="w-4 h-4 mr-1" />
+                  PDF
                 </Button>
               </div>
             </div>
@@ -1129,9 +1306,9 @@ export default function CompanyPage() {
               <div className="flex items-center gap-2">
                 {renderStars(Math.round(companyData.averageRating))}
                 <span className="text-lg font-semibold">{companyData.averageRating.toFixed(1)}</span>
-                <span className="text-muted-foreground">({companyData.evaluations.length}件の評価)</span>
+                <span className="text-gray-600">({companyData.evaluations.length}件の評価)</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
                 <TrendingUp className="w-4 h-4" />
                 <span>{companyData.searchCount}回検索</span>
               </div>
@@ -1162,19 +1339,12 @@ export default function CompanyPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-muted-foreground leading-relaxed">
-                    {companyData.description.split('\n').map((line, index) => {
-                      if (line.startsWith('•')) {
-                        return (
-                          <div key={index} className="flex items-start gap-2 mb-2">
-                            <span className="text-primary mt-0.5">•</span>
-                            <span className="flex-1">{line.substring(1).trim()}</span>
-                          </div>
-                        );
-                      }
-                      return line.trim() ? <p key={index} className="mb-2">{line}</p> : null;
-                    })}
-                  </div>
+                  {/* 整形された会社概要 */}
+                  <CompanyOverview
+                    overview={companyData.description}
+                    maxSections={20}
+                    isLoggedIn={!!currentUser?.id}
+                  />
                   
                   {/* 編集履歴表示 */}
                   {showHistory && (
@@ -1194,7 +1364,7 @@ export default function CompanyPage() {
                                 <span className="font-medium">
                                   {getUserDisplayName(entry.editor)}
                                 </span>
-                                <span className="text-muted-foreground text-xs">
+                                <span className="text-gray-600 text-xs">
                                   {new Date(entry.editedAt).toLocaleDateString('ja-JP', {
                                     year: 'numeric',
                                     month: 'short',
@@ -1204,7 +1374,7 @@ export default function CompanyPage() {
                                   })}
                                 </span>
                               </div>
-                              <div className="text-muted-foreground mb-2">
+                              <div className="text-gray-600 mb-2">
                                 <strong>フィールド:</strong> {entry.field} | <strong>編集理由:</strong> {entry.reason}
                               </div>
                               <div className="mt-2">
@@ -1224,100 +1394,66 @@ export default function CompanyPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-muted-foreground text-sm">編集履歴はありません</p>
+                        <p className="text-gray-600 text-sm">編集履歴はありません</p>
                       )}
                     </div>
                   )}
 
-                  {/* 基本情報 - 会社の場合のみ表示 */}
-                  {!isPerson && (
-                    <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="font-medium">設立年:</span>
-                        <span className="ml-2 text-muted-foreground">{companyData.founded}</span>
-                      </div>
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="font-medium">従業員数:</span>
-                        <span className="ml-2 text-muted-foreground">{companyData.employees}</span>
-                      </div>
-                    </div>
-                  )}
+                  {/* 基本情報 - 非表示 */}
 
-
-                  {companyData.website && (
-                    <div className="mt-4">
-                      <a href={companyData.website} target="_blank" rel="noopener noreferrer" 
-                         className="inline-flex items-center gap-2 text-primary hover:underline">
-                        <ExternalLink className="w-4 h-4" />
-                        公式サイト
-                      </a>
-                    </div>
-                  )}
+                  {/* 公式サイト - 非表示 */}
                 </CardContent>
               </Card>
 
-              {/* 検索結果インサイト */}
-              {companyData.searchResults && companyData.searchResults.length > 0 && (
+              {/* 検索結果インサイト - 非表示 */}
+
+              {/* 参考サイト */}
+              {companyData.sources && companyData.sources.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Search className="w-5 h-5" />
-                      検索インサイト
+                      参考サイト
                     </CardTitle>
                     <CardDescription>
-                      {companyData.name}に関する検索結果・分析レポート
+                      この企業情報の作成時に参照したウェブサイト
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {companyData.searchResults.slice(0, 3).map((result) => (
-                        <div key={result.id} className="border border-border rounded-lg p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Search className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-sm text-blue-600">
-                                  {result.query}
-                                </span>
-                              </div>
-                              <div className="text-sm text-muted-foreground leading-relaxed overflow-hidden">
-                                <ReactMarkdown className="prose prose-sm max-w-none whitespace-pre-wrap">
-                                  {result.answer.length > 200
-                                    ? result.answer.substring(0, 200) + '...'
-                                    : result.answer}
-                                </ReactMarkdown>
+                    <div className="space-y-3">
+                      {companyData.sources.slice(0, 10).map((source, index) => (
+                        <div key={index} className="border border-border rounded-lg p-3 hover:bg-muted/50 transition-colors">
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <div className="flex items-start gap-2">
+                              <ExternalLink className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-primary hover:underline truncate">
+                                  {source.title || (() => { try { return new URL(source.url).hostname; } catch { return source.url; } })()}
+                                </p>
+                                <p className="text-xs text-gray-600 truncate mt-0.5">
+                                  {source.url}
+                                </p>
+                                {source.published_at && (
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    {source.published_at}
+                                  </p>
+                                )}
                               </div>
                             </div>
-                            <Badge variant="outline" className="text-xs shrink-0 ml-2">
-                              {new Date(result.createdAt).toLocaleDateString('ja-JP')}
-                            </Badge>
-                          </div>
-                          {result.answer.length > 200 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs p-0 h-auto text-blue-600 hover:text-blue-700"
-                              onClick={() => {
-                                // 展開機能は後で実装
-                                alert('詳細表示機能は開発中です');
-                              }}
-                            >
-                              続きを読む
-                            </Button>
-                          )}
+                          </a>
                         </div>
                       ))}
-                      
-                      {companyData.searchResults.length > 3 && (
-                        <div className="text-center pt-2">
-                          <Link href={`/search-results?company=${encodeURIComponent(companyName)}`}>
-                            <Button variant="outline" size="sm">
-                              すべての検索結果を見る ({companyData.searchResults.length}件)
-                            </Button>
-                          </Link>
-                        </div>
-                      )}
                     </div>
+                    {companyData.sources.length > 10 && (
+                      <p className="text-sm text-gray-600 mt-3 text-center">
+                        他 {companyData.sources.length - 10} 件のソース
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -1371,11 +1507,11 @@ export default function CompanyPage() {
                                   <div className="flex items-center gap-1">
                                     {renderStars(evaluation.rating)}
                                   </div>
-                                  <span className="text-muted-foreground text-xs ml-auto">
+                                  <span className="text-gray-600 text-xs ml-auto">
                                     {new Date(evaluation.timestamp).toLocaleDateString('ja-JP')}
                                   </span>
                                 </div>
-                                <p className="text-muted-foreground leading-relaxed">
+                                <p className="text-gray-700 leading-relaxed">
                                   "{evaluation.comment}"
                                 </p>
                               </div>
@@ -1386,10 +1522,17 @@ export default function CompanyPage() {
                     </div>
                   ) : (
                     <div className="border border-dashed border-border rounded-lg p-6 text-center space-y-3">
-                      <p className="text-muted-foreground">まだこの企業の評価は投稿されていません。</p>
+                      <p className="text-gray-600">まだこの企業の評価は投稿されていません。</p>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
                         <span className="text-sm text-gray-600">最初の評価を投稿してみませんか？</span>
-                        <Button size="sm" onClick={() => setShowEvaluationForm(true)}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            console.log('評価投稿ボタンがクリックされました');
+                            setShowEvaluationForm(true);
+                          }}
+                        >
                           評価を投稿する
                         </Button>
                       </div>
@@ -1408,11 +1551,18 @@ export default function CompanyPage() {
                 </CardHeader>
                 <CardContent>
                   {hasUserEvaluated ? (
-                    <p className="text-muted-foreground text-center py-4">
+                    <p className="text-gray-700 text-center py-4">
                       この会社については既に評価済みです
                     </p>
                   ) : !showEvaluationForm ? (
-                    <Button onClick={() => setShowEvaluationForm(true)} className="w-full">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        console.log('サイドバーの評価投稿ボタンがクリックされました');
+                        setShowEvaluationForm(true);
+                      }}
+                      className="w-full"
+                    >
                       評価を投稿する
                     </Button>
                   ) : (
@@ -1457,7 +1607,7 @@ export default function CompanyPage() {
                             </span>
                           </label>
                           {!canUseRealIdentity && (
-                            <p className="text-xs text-muted-foreground ml-6">
+                            <p className="text-xs text-gray-600 ml-6">
                               ログインすると実名で投稿できます
                             </p>
                           )}
@@ -1497,7 +1647,7 @@ export default function CompanyPage() {
                           onClick={() => {
                             setShowEvaluationForm(false);
                             setRating(0);
-                            setRelationship('');
+                            setRelationshipType('');
                             setComment('');
                             setIsAnonymous(false);
                           }}
@@ -1510,28 +1660,71 @@ export default function CompanyPage() {
                 </CardContent>
               </Card>
 
-              {/* 関連アクション */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">関連アクション</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Link href={`/search?q=${encodeURIComponent(companyName)}`}>
-                    <Button variant="outline" className="w-full justify-start">
-                      <Building2 className="w-4 h-4 mr-2" />
-                      詳細を検索
-                    </Button>
-                  </Link>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Users className="w-4 h-4 mr-2" />
-                    類似企業を探す
-                  </Button>
-                </CardContent>
-              </Card>
+              {/* よく調べられている関連企業 */}
+              {relatedCompanies.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">よく調べられている関連企業</CardTitle>
+                    <CardDescription>
+                      同業界・人気の企業
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {relatedCompanies.map((company) => (
+                      <Link
+                        key={company.slug}
+                        href={`/company/${company.slug}`}
+                        className="block"
+                      >
+                        <div className="border border-border rounded-lg p-3 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                              <img
+                                src={`/logos/${company.slug}.png`}
+                                alt={`${company.name} ロゴ`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/default-company.png';
+                                  e.currentTarget.onerror = null;
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate hover:text-primary">
+                                {company.name}
+                              </p>
+                              <p className="text-xs text-gray-600 truncate">
+                                {company.industry}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {company.averageRating > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-xs text-gray-600">
+                                      {company.averageRating.toFixed(1)}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-1">
+                                  <TrendingUp className="w-3 h-3 text-gray-400" />
+                                  <span className="text-xs text-gray-600">
+                                    {company.searchCount}回
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 関連アクション - 非表示 */}
             </div>
           </div>
         </div>
       </div>
-    </>
   );
 }

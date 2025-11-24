@@ -169,8 +169,16 @@ export default function SignupPage() {
                 >
                   <option value="">選択してください</option>
                   <option value="founder">創業者・経営者</option>
+                  <option value="executive">役員</option>
+                  <option value="engineer">エンジニア</option>
+                  <option value="sales">セールス</option>
+                  <option value="marketer">マーケター</option>
+                  <option value="designer">デザイナー</option>
                   <option value="employee">従業員</option>
+                  <option value="freelancer">フリーランス</option>
                   <option value="investor">投資家</option>
+                  <option value="vc">VC</option>
+                  <option value="cvc">CVC</option>
                   <option value="advisor">アドバイザー</option>
                   <option value="other">その他</option>
                 </select>

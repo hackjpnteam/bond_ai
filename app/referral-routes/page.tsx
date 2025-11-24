@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Search, Loader2, ArrowLeft, Sparkles, Target, Network } from 'lucide-react'
 import { ReferralRouteVisualization } from '@/components/ReferralRouteVisualization'
 import Link from 'next/link'
+import { LockedFeature } from '@/components/OnboardingBanner'
 
 interface Connection {
   id: string
@@ -73,9 +74,10 @@ export default function ReferralRoutesPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30">
-      {/* Header */}
-      <div className="bg-white border-b border-ash-line">
+    <LockedFeature featureName="AI最適ルート提案">
+      <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30">
+        {/* Header */}
+        <div className="bg-white border-b border-ash-line">
         <div className="container-narrow mx-auto px-4 py-6">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4">
             <ArrowLeft className="w-4 h-4" />
@@ -242,5 +244,6 @@ export default function ReferralRoutesPage() {
         )}
       </div>
     </div>
+    </LockedFeature>
   )
 }

@@ -102,16 +102,19 @@ export async function POST(request: NextRequest) {
       fallbackSources = searchResults;
       if (searchResults.length === 0) {
         console.warn('No search results found');
-        const fallback = await buildFallbackResponse({
-          query,
-          openai,
-          company: matchedCompany || { name: query },
-          bondStats: bondScoreStats,
-          fallbackSources,
-          preferredFacts
-        });
+        // 検索結果がない場合はDB情報のみで応答
         let response: ApiResponse = {
-          ...fallback,
+          answer: matchedCompany?.description
+            ? `${matchedCompany.name}についての情報です。\n\n${matchedCompany.description.substring(0, 500)}${matchedCompany.description.length > 500 ? '...' : ''}`
+            : `${query}に関する検索結果が見つかりませんでした。`,
+          facts: preferredFacts || [
+            { label: "会社名", value: matchedCompany?.name || query },
+            { label: "業界", value: matchedCompany?.industry || "—" },
+            { label: "設立", value: matchedCompany?.founded || "—" },
+            { label: "ウェブサイト", value: matchedCompany?.website || "—" }
+          ],
+          sources: [],
+          tokens: 0,
           took_ms: Date.now() - startTime
         };
         response = await attachEnrichment(response, matchedCompany);
@@ -139,16 +142,23 @@ export async function POST(request: NextRequest) {
 
       // If no content was fetched, return partial result
       if (pageContents.size === 0) {
-        const fallback = await buildFallbackResponse({
-          query,
-          openai,
-          company: matchedCompany || { name: query },
-          bondStats: bondScoreStats,
-          fallbackSources,
-          preferredFacts
-        });
+        // ページ内容取得失敗時は検索結果URLのみで応答
         let response: ApiResponse = {
-          ...fallback,
+          answer: matchedCompany?.description
+            ? `${matchedCompany.name}についての情報です。\n\n${matchedCompany.description.substring(0, 500)}${matchedCompany.description.length > 500 ? '...' : ''}\n\n詳細は以下の参考資料をご確認ください。`
+            : `${query}についてWeb検索を行いました。詳細は参考資料をご確認ください。`,
+          facts: preferredFacts || [
+            { label: "会社名", value: matchedCompany?.name || query },
+            { label: "業界", value: matchedCompany?.industry || "—" },
+            { label: "設立", value: matchedCompany?.founded || "—" },
+            { label: "ウェブサイト", value: matchedCompany?.website || "—" }
+          ],
+          sources: fallbackSources.slice(0, 3).map(s => ({
+            url: s.url,
+            title: s.title,
+            published_at: s.published_at
+          })),
+          tokens: 0,
           took_ms: Date.now() - startTime
         };
         response = await attachEnrichment(response, matchedCompany);
@@ -164,7 +174,7 @@ export async function POST(request: NextRequest) {
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
-        max_tokens: 1200,
+        max_tokens: 4500,  // 1800-2300文字の日本語レポート + JSON構造に必要
         temperature: 0.2,
         messages: [
           {
@@ -238,33 +248,36 @@ export async function POST(request: NextRequest) {
 
     } catch (openaiError: any) {
       console.error('OpenAI API error:', openaiError?.message);
-      
-      // Return fallback response
-      try {
-        const fallback = await buildFallbackResponse({
-          query,
-          openai,
-          company: matchedCompany || { name: query },
-          bondStats: bondScoreStats,
-          fallbackSources,
-          preferredFacts
-        });
-        let response: ApiResponse = {
-          ...fallback,
-          took_ms: Date.now() - startTime
-        };
-        response = await attachEnrichment(response, matchedCompany);
-        response = applyBondMetadata(response, matchedCompany, query);
-        return NextResponse.json(response);
-      } catch (fallbackError: any) {
-        console.error('Fallback generation error:', fallbackError?.message);
-        return NextResponse.json(
-          {
-            error: 'レポート生成に失敗しました。'
-          },
-          { status: 500 }
-        );
-      }
+
+      // OpenAI失敗時は検索結果のみで基本レスポンスを返す
+      const basicFacts: Fact[] = preferredFacts || [
+        { label: "会社名", value: matchedCompany?.name || query },
+        { label: "業界", value: matchedCompany?.industry || "情報収集中..." },
+        { label: "設立", value: matchedCompany?.founded || "—" },
+        { label: "所在地", value: matchedCompany?.headquarters || matchedCompany?.location || "—" },
+        { label: "ウェブサイト", value: matchedCompany?.website || "—" },
+        { label: "従業員数", value: matchedCompany?.employees || "—" },
+        { label: "サービス概要", value: matchedCompany?.description?.substring(0, 100) || "情報収集中..." },
+        { label: "直近ニュース", value: fallbackSources[0]?.title || "—" }
+      ];
+
+      let response: ApiResponse = {
+        answer: matchedCompany?.description
+          ? `${matchedCompany.name}についての情報です。\n\n${matchedCompany.description.substring(0, 500)}${matchedCompany.description.length > 500 ? '...' : ''}\n\n詳細は以下の参考資料をご確認ください。`
+          : `${query}についてWeb検索を行いました。詳細は参考資料をご確認ください。\n\n※現在AIによる要約機能は一時的に利用できません。`,
+        facts: basicFacts,
+        sources: fallbackSources.slice(0, 3).map(s => ({
+          url: s.url,
+          title: s.title,
+          published_at: s.published_at
+        })),
+        tokens: 0,
+        took_ms: Date.now() - startTime
+      };
+
+      response = await attachEnrichment(response, matchedCompany);
+      response = applyBondMetadata(response, matchedCompany, query);
+      return NextResponse.json(response);
     }
 
   } catch (error: any) {

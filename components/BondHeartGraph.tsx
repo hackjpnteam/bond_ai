@@ -174,6 +174,14 @@ const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
     // ノードグループ
     const nodeGroup = svg.append('g').attr('class', 'nodes');
 
+    // 中心ノードを画面中央に固定
+    data.nodes.forEach((node) => {
+      if (node.isCenter) {
+        node.fx = width / 2;
+        node.fy = height / 2;
+      }
+    });
+
     // シミュレーション設定
     const simulation = d3.forceSimulation<Node>(data.nodes)
       .force('link', d3.forceLink<Node, Link>(data.links)

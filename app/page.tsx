@@ -177,8 +177,8 @@ export default function Page() {
               <Link href="/signup" className="btn-dark">
                 無料で始める
               </Link>
-              <Link href="mailto:info@bond.com?subject=資料請求" className="btn-ol">
-                資料請求
+              <Link href="/letter" className="btn-ol">
+                はじめに
               </Link>
             </div>
           </div>

@@ -15,6 +15,8 @@ export interface IUser extends Document {
   verified: boolean;
   provider?: string;
   providerId?: string;
+  evaluationCount: number;
+  onboardingCompleted: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -54,7 +56,21 @@ const UserSchema: Schema<IUser> = new Schema({
   role: {
     type: String,
     required: [true, 'Role is required'],
-    enum: ['investor', 'founder', 'employee', 'advisor', 'other'],
+    enum: [
+      'founder',      // 創業者・経営者
+      'executive',    // 役員
+      'engineer',     // エンジニア
+      'sales',        // セールス
+      'marketer',     // マーケター
+      'designer',     // デザイナー
+      'employee',     // 従業員
+      'freelancer',   // フリーランス
+      'investor',     // 投資家
+      'vc',           // VC
+      'cvc',          // CVC
+      'advisor',      // アドバイザー
+      'other'         // その他
+    ],
     default: 'other'
   },
   company: {
@@ -90,6 +106,14 @@ const UserSchema: Schema<IUser> = new Schema({
   providerId: {
     type: String,
     trim: true
+  },
+  evaluationCount: {
+    type: Number,
+    default: 0
+  },
+  onboardingCompleted: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
@@ -113,7 +137,11 @@ UserSchema.methods.comparePassword = async function(candidatePassword: string): 
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Prevent re-compilation during development
+// Delete cached model in development to allow schema updates
+if (process.env.NODE_ENV !== 'production' && mongoose.models.User) {
+  delete mongoose.models.User;
+}
+
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 
 export default User;

@@ -11,9 +11,15 @@ export interface ICompany extends Document {
   searchCount: number;
   averageRating: number;
   isUserEdited: boolean;
-  dataSource: 'auto' | 'user_edited' | 'mixed';
+  dataSource: 'auto' | 'user_edited' | 'mixed' | 'ai_search';
   lastEditedBy?: string;
   lastEditedAt?: Date;
+  lastSearchAt?: Date;
+  sources?: Array<{
+    url: string;
+    title?: string;
+    published_at?: string;
+  }>;
   editHistory?: Array<{
     field: string;
     oldValue: string;
@@ -50,7 +56,7 @@ const CompanySchema: Schema<ICompany> = new Schema({
   description: {
     type: String,
     required: true,
-    maxlength: 5000
+    maxlength: 50000
   },
   founded: {
     type: String,
@@ -86,7 +92,7 @@ const CompanySchema: Schema<ICompany> = new Schema({
   },
   dataSource: {
     type: String,
-    enum: ['auto', 'user_edited', 'mixed'],
+    enum: ['auto', 'user_edited', 'mixed', 'ai_search'],
     default: 'auto'
   },
   lastEditedBy: {
@@ -95,6 +101,14 @@ const CompanySchema: Schema<ICompany> = new Schema({
   lastEditedAt: {
     type: Date
   },
+  lastSearchAt: {
+    type: Date
+  },
+  sources: [{
+    url: { type: String, required: true },
+    title: { type: String },
+    published_at: { type: String }
+  }],
   editHistory: [{
     field: { type: String, required: true },
     oldValue: { type: String, required: true },

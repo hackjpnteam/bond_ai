@@ -9,6 +9,7 @@ import { ArrowLeft, Search, Filter, Users, Star, Building2, Award, MapPin, Loade
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { toast } from 'sonner'
+import { LockedFeature } from '@/components/OnboardingBanner'
 
 interface UserProfile {
   id: string
@@ -236,6 +237,7 @@ export default function UsersPage() {
   }
 
   return (
+    <LockedFeature featureName="ユーザーディレクトリ">
     <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30">
       {/* Header */}
       <div className="bg-white border-b border-ash-line">
@@ -432,5 +434,6 @@ export default function UsersPage() {
 
       </div>
     </div>
+    </LockedFeature>
   )
 }

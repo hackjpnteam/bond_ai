@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { MobileNav } from '@/components/MobileNav'
-import { LogOut, Bell } from 'lucide-react'
+import { LogOut, Bell, Mail } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import Logo from '@/components/Logo'
 
@@ -54,6 +54,10 @@ export function Navigation() {
             linkClassName="hover:opacity-80 transition-opacity"
           />
           <div className="hidden md:flex items-center space-x-4">
+            <Link href="/letter" className="text-ash-muted hover:text-ash-text transition-colors font-medium px-2 py-2 rounded-md hover:bg-ash-surface2/50 whitespace-nowrap flex items-center gap-1">
+              <Mail className="w-4 h-4" />
+              手紙
+            </Link>
             <Link href="/ranking" className="text-ash-muted hover:text-ash-text transition-colors font-medium px-2 py-2 rounded-md hover:bg-ash-surface2/50 whitespace-nowrap">
               ランキング
             </Link>

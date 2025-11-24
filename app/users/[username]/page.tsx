@@ -539,6 +539,16 @@ export default function UserProfilePage() {
                     すべて
                   </button>
                   <button
+                    onClick={() => setRelationshipFilter(5)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      relationshipFilter === 5
+                        ? 'bg-pink-600 text-white'
+                        : 'bg-pink-50 text-pink-700 hover:bg-pink-100'
+                    }`}
+                  >
+                    株主
+                  </button>
+                  <button
                     onClick={() => setRelationshipFilter(4)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                       relationshipFilter === 4

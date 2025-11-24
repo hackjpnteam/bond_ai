@@ -474,8 +474,20 @@ export function ChatResultBubble({ result, mode, company }: ChatResultBubbleProp
         {/* ヘッダー */}
         <div className="bg-gradient-to-r from-[#ff7a18] via-[#ff5f4a] to-[#ff3d81] p-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden">
+              <img
+                src={`/logos/${company.toLowerCase()}.png`}
+                alt={`${company} ロゴ`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              <div className="w-full h-full items-center justify-center hidden">
+                <Building2 className="w-6 h-6 text-white" />
+              </div>
             </div>
             <div className="flex-1">
               <h2 className="text-lg font-bold text-white">{company}</h2>
@@ -662,16 +674,16 @@ export function ChatResultBubble({ result, mode, company }: ChatResultBubbleProp
                 <h4 className="font-semibold text-gray-900">評価を投稿する</h4>
 
                 <div>
-                  <label className="text-xs text-muted-foreground">評価 (星の数)</label>
+                  <label className="text-xs text-gray-700 font-medium">評価 (星の数)</label>
                   {renderStars(rating, true)}
                 </div>
 
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-2">関係性</label>
+                  <label className="text-xs text-gray-700 font-medium block mb-2">関係性</label>
                   <select
                     value={relationshipType ?? ''}
                     onChange={(e) => setRelationshipType(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full h-8 text-xs px-3 py-1 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full h-8 text-xs px-3 py-1 border border-gray-300 bg-white text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">関係性を選択</option>
                     {RELATIONSHIP_OPTIONS.map((option) => (
@@ -683,12 +695,12 @@ export function ChatResultBubble({ result, mode, company }: ChatResultBubbleProp
                 </div>
 
                 <div>
-                  <label className="text-xs text-muted-foreground">コメント</label>
+                  <label className="text-xs text-gray-700 font-medium">コメント</label>
                   <Textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="具体的な経験や感想を教えてください..."
-                    className="mt-1 min-h-[100px] text-sm"
+                    className="mt-1 min-h-[100px] text-sm bg-white text-gray-900"
                   />
                 </div>
 

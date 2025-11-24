@@ -11,15 +11,15 @@ export async function GET(request: NextRequest) {
     const demoCompanies = [
       {
         _id: '1',
-        name: 'ギグー',
-        slug: 'tech-innovate',
-        description: '革新的なAI技術で未来を創造するスタートアップ',
-        logoUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9InVybCgjZ3JhZGllbnQwX2xpbmVhcl8xXzEpIi8+CjxwYXRoIGQ9Ik0yMC4yIDQ2VjE4LjhIMjcuNlYyMC44SDIyLjJWMzAuNkgyNi44VjMyLjZIMjIuMlY0NEgyOFY0NkgyMC4yWk0zNi42IDQ2VjE4LjhINDIuMkM0My43MzMzIDE4LjggNDQuOTMzMyAxOS4yIDQ1LjggMjAuMkM0Ni42NjY3IDIxLjIgNDcuMSAyMi40NjY3IDQ3LjEgMjRDNDcuMSAyNS41MzMzIDQ2LjY2NjcgMjYuOCA0NS44IDI3LjhDNDQuOTMzMyAyOC44IDQzLjczMzMgMjkuMiA0Mi4yIDI5LjJIMzguNlY0NkgzNi42Wk0zOC42IDI3LjJINDIuMkM0Mi44NjY3IDI3LjIgNDMuMzMzMyAyNi45MzMzIDQzLjYgMjYuNEM0My44NjY3IDI1Ljg2NjcgNDQgMjUuMiA0NCAyNC40Qzc0NCAyMy43MzMzIDQzLjg2NjcgMjMuMiA0My42IDIyLjhDNDMuMzMzMyAyMi40IDQyLjg2NjcgMjIuMiA0Mi4yIDIyLjJIMzguNlYyNy4yWiIgZmlsbD0id2hpdGUiLz4KPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQwX2xpbmVhcl8xXzEiIHgxPSIwIiB5MT0iMCIgeDI9IjY0IiB5Mj0iNjQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iIzMzNzVGRiIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2MzY2RjEiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K',
-        website: 'https://techinnovate.com',
+        name: '株式会社ギグー',
+        slug: 'ギグー',
+        description: 'AIを活用したHRテック企業。採用・人材管理の革新的なソリューションを提供し、企業の人材戦略を支援しています。',
+        logoUrl: '/logos/ギグー.png',
+        website: 'https://gigoo.co.jp',
         industry: 'AI・機械学習',
-        foundedYear: 2023,
+        foundedYear: 2020,
         location: '東京',
-        employees: 25,
+        employees: 35,
         trust: {
           total: 4.8,
           byRole: {
@@ -33,21 +33,21 @@ export async function GET(request: NextRequest) {
       },
       {
         _id: '2',
-        name: 'DigitalSolutions',
-        slug: 'digital-solutions',
-        description: 'デジタル変革を支援するコンサルティング企業',
-        logoUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9InVybCgjZ3JhZGllbnQwX2xpbmVhcl8yXzIpIi8+CjxwYXRoIGQ9Ik0yMC4yIDQ2VjE4LjhIMjcuNEMyOC4yNjY3IDE4LjggMjkuMDMzMyAxOS4wMzMzIDI5LjcgMTkuNUMzMC4zNjY3IDIwIDMwLjcgMjAuNjMzMyAzMC43IDIxLjRDMzAuNyAyMi4yIDMwLjM2NjcgMjIuODMzMyAyOS43IDIzLjNDMjkuMDMzMyAyMy43NjY3IDI4LjI2NjcgMjQgMjcuNCAyNEgyMi4yVjI4LjhIMjguNFYzMC44SDIyLjJWNDZIMjAuMlpNMjIuMiAyMi4ySDI3LjRDMjcuOCAyMi4yIDI4LjEgMjIgMjguMyAyMS42QzI4LjUgMjEuMiAyOC42IDIwLjggMjguNiAyMC40QzI4LjYgMjAgMjguNSAxOS42IDI4LjMgMTkuMkMyOC4xIDE4LjggMjcuOCAxOC42IDI3LjQgMTguNkgyMi4yVjIyLjJaIiBmaWxsPSJ3aGl0ZSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudDBfbGluZWFyXzJfMiIgeDE9IjAiIHkxPSIwIiB4Mj0iNjQiIHkyPSI2NCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgo8c3RvcCBzdG9wLWNvbG9yPSIjMTBCOTgxIi8+CjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVCQzE4QSIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+Cjwvc3ZnPgo=',
-        website: 'https://digitalsolutions.jp',
-        industry: 'コンサルティング',
-        foundedYear: 2022,
-        location: '大阪',
-        employees: 40,
+        name: '株式会社hokuto',
+        slug: 'hokuto',
+        description: '医療・ヘルスケア領域におけるDXを推進するスタートアップ。医療従事者向けプラットフォームを開発・運営しています。',
+        logoUrl: '/logos/hokuto.png',
+        website: 'https://hokuto.co.jp',
+        industry: 'ヘルステック',
+        foundedYear: 2019,
+        location: '東京',
+        employees: 80,
         trust: {
-          total: 4.5,
+          total: 4.6,
           byRole: {
-            'Employee': 4.6,
-            'Customer': 4.4,
-            'Advisor': 4.5
+            'Employee': 4.7,
+            'Investor': 4.6,
+            'Customer': 4.5
           }
         },
         grade: 'A' as const,
@@ -55,25 +55,69 @@ export async function GET(request: NextRequest) {
       },
       {
         _id: '3',
-        name: 'StartupHub',
-        slug: 'startup-hub',
-        description: 'スタートアップ支援プラットフォーム',
-        logoUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9InVybCgjZ3JhZGllbnQwX2xpbmVhcl8zXzMpIi8+CjxwYXRoIGQ9Ik0yMC4yIDQ2VjE4LjhIMjdWMjAuOEgyMi4yVjMwLjZIMjdWMzIuNkgyMi4yVjQ0SDI3LjhWNDZIMjAuMlpNMzQuNiA0NlYxOC44SDM2LjZWMjguNkg0MS44VjE4LjhINDMuOFY0Nkg0MS44VjMwLjZIMzYuNlY0NkgzNC42WiIgZmlsbD0id2hpdGUiLz4KPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQwX2xpbmVhcl8zXzMiIHgxPSIwIiB5MT0iMCIgeDI9IjY0IiB5Mj0iNjQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KPHN0b3Agc3RvcC1jb2xvcj0iI0Y1OUUwQiIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNGQjkyMzciLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K',
-        website: 'https://startuphub.co.jp',
-        industry: 'プラットフォーム',
-        foundedYear: 2024,
-        location: '東京',
-        employees: 15,
+        name: 'Chatwork株式会社',
+        slug: 'chatwork',
+        description: '国内最大級のビジネスチャットツール「Chatwork」を提供。中小企業を中心に、業務効率化とコミュニケーション改善を支援。',
+        logoUrl: '/logos/chatwork.png',
+        website: 'https://go.chatwork.com',
+        industry: 'SaaS・プラットフォーム',
+        foundedYear: 2004,
+        location: '大阪',
+        employees: 350,
         trust: {
-          total: 4.7,
+          total: 4.5,
           byRole: {
-            'Founder': 5.0,
-            'Investor': 4.5,
-            'Fan': 4.6
+            'Customer': 4.6,
+            'Employee': 4.4,
+            'Investor': 4.5
           }
         },
         grade: 'A' as const,
         createdAt: new Date('2024-03-05')
+      },
+      {
+        _id: '4',
+        name: '株式会社ホーミー',
+        slug: 'ホーミー',
+        description: '不動産テック企業。AIを活用した不動産取引プラットフォームを展開し、住宅購入体験を革新しています。',
+        logoUrl: '/logos/ホーミー.png',
+        website: 'https://homie.co.jp',
+        industry: '不動産テック',
+        foundedYear: 2018,
+        location: '東京',
+        employees: 60,
+        trust: {
+          total: 4.4,
+          byRole: {
+            'Customer': 4.5,
+            'Employee': 4.3,
+            'Advisor': 4.4
+          }
+        },
+        grade: 'B' as const,
+        createdAt: new Date('2024-04-01')
+      },
+      {
+        _id: '5',
+        name: '株式会社Sopital',
+        slug: 'sopital',
+        description: '医療機関向けDXソリューションを提供。病院の業務効率化と患者体験の向上を実現するサービスを展開。',
+        logoUrl: '/logos/sopital.png',
+        website: 'https://sopital.co.jp',
+        industry: 'ヘルステック',
+        foundedYear: 2021,
+        location: '東京',
+        employees: 25,
+        trust: {
+          total: 4.3,
+          byRole: {
+            'Investor': 4.4,
+            'Employee': 4.2,
+            'Customer': 4.3
+          }
+        },
+        grade: 'B' as const,
+        createdAt: new Date('2024-05-01')
       }
     ]
 

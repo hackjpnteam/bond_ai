@@ -195,9 +195,15 @@ export default function BondSearchPage() {
           credentials: 'include',
           body: JSON.stringify({
             query: userQuery,
-            company: userQuery,
+            company: data.companyName || userQuery,
             answer: data.answer,
-            metadata: { mode }
+            metadata: {
+              mode,
+              sources: data.sources || [],
+              companySlug: data.companySlug,
+              bondPageUrl: data.bondPageUrl,
+              facts: data.facts
+            }
           }),
         });
       } catch (e) {
@@ -333,7 +339,7 @@ export default function BondSearchPage() {
                     {/* モード未選択時の質問 */}
                     {mode === null ? (
                       <div className="flex justify-start">
-                        <div className="max-w-[90%] md:max-w-[85%] bg-muted/50 text-foreground rounded-lg p-4 shadow-sm">
+                        <div className="max-w-[90%] md:max-w-[85%] bg-white text-foreground rounded-lg p-4 shadow-sm border border-gray-100">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/20">
                               <img
@@ -443,7 +449,7 @@ export default function BondSearchPage() {
                     ) : (
                       /* モード選択後の推奨メッセージ */
                       <div className="flex justify-start">
-                        <div className="max-w-[90%] md:max-w-[85%] bg-muted/50 text-foreground rounded-lg p-4 shadow-sm">
+                        <div className="max-w-[90%] md:max-w-[85%] bg-white text-foreground rounded-lg p-4 shadow-sm border border-gray-100">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/20">
                               <img 
@@ -590,7 +596,7 @@ export default function BondSearchPage() {
                         className={`max-w-[80%] md:max-w-[75%] p-3 md:p-4 rounded-lg shadow-sm ${
                           msg.role === 'user'
                             ? 'bg-primary text-primary-foreground ml-auto'
-                            : 'bg-muted/50 text-foreground'
+                            : 'bg-white text-foreground border border-gray-100'
                         }`}
                       >
                         {msg.role === 'assistant' && (
@@ -635,7 +641,7 @@ export default function BondSearchPage() {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div className="bg-muted/50 p-4 rounded-lg shadow-sm max-w-[80%] md:max-w-[75%]">
+                      <div className="bg-white p-4 rounded-lg shadow-sm max-w-[80%] md:max-w-[75%] border border-gray-100">
                         <div className="flex items-center gap-2 mb-3">
                           <span className="text-xs font-medium text-muted-foreground">Bond</span>
                         </div>
@@ -670,7 +676,7 @@ export default function BondSearchPage() {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div className="bg-muted/50 p-4 rounded-lg shadow-sm flex-1">
+                      <div className="bg-white p-4 rounded-lg shadow-sm flex-1 border border-gray-100">
                         <div className="flex items-center gap-2 mb-3">
                           <span className="text-xs font-medium text-muted-foreground">Bond</span>
                         </div>
@@ -704,7 +710,7 @@ export default function BondSearchPage() {
                 />
               </div>
               <div className="flex-1 space-y-4 max-w-full md:max-w-[85%]">
-                <div className="bg-muted/30 rounded-lg p-4">
+                <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
                   <SimpleStep step={step} />
                   <div className="mt-4">
                     <RotatingMessage />

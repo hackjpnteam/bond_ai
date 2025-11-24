@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Star, Clock, Building2, User } from 'lucide-react';
 import Link from 'next/link';
 import { getRelationshipLabel } from '@/lib/relationship';
+import { getCompanyLogoPath } from '@/lib/utils';
+import { LockedFeature } from '@/components/OnboardingBanner';
 
 interface Evaluation {
   id: string;
@@ -97,8 +99,9 @@ export default function TimelinePage() {
     ? evaluations
     : evaluations.filter(e => e.relationshipType === relationshipFilter);
 
-  if (loading) {
-    return (
+  return (
+    <LockedFeature featureName="タイムライン">
+    {loading ? (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-3xl mx-auto">
@@ -109,10 +112,7 @@ export default function TimelinePage() {
           </div>
         </div>
       </div>
-    );
-  }
-
-  return (
+    ) : (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto space-y-6">
@@ -123,7 +123,7 @@ export default function TimelinePage() {
                 <Clock className="w-6 h-6 text-primary" />
                 タイムライン
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-gray-600 mt-2">
                 コミュニティの最新評価をチェック
                 {evaluations.length > 0 && (
                   <span className="ml-2">
@@ -148,6 +148,16 @@ export default function TimelinePage() {
                     }`}
                   >
                     すべて
+                  </button>
+                  <button
+                    onClick={() => setRelationshipFilter(5)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      relationshipFilter === 5
+                        ? 'bg-pink-600 text-white'
+                        : 'bg-pink-50 text-pink-700 hover:bg-pink-100'
+                    }`}
+                  >
+                    株主
                   </button>
                   <button
                     onClick={() => setRelationshipFilter(4)}
@@ -238,27 +248,35 @@ export default function TimelinePage() {
                       <div className="flex-1 min-w-0">
                         {/* Header */}
                         <div className="flex items-center gap-2 mb-3">
-                          <span className="font-medium text-foreground">
+                          <span className="font-medium text-gray-900">
                             {evaluation.isAnonymous ? '匿名ユーザー' : (evaluation.userName || 'Anonymous User')}
                           </span>
                           <Badge variant="outline">
                             {evaluation.relationshipLabel}
                           </Badge>
-                          <span className="text-muted-foreground text-sm">が</span>
+                          <span className="text-gray-600 text-sm">が</span>
                           <Link
                             href={`/company/${encodeURIComponent(evaluation.company)}`}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md text-sm font-medium transition-colors"
+                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md text-sm font-medium transition-colors"
                           >
-                            <Building2 className="w-3 h-3" />
+                            <img
+                              src={getCompanyLogoPath(evaluation.company)}
+                              alt={evaluation.company}
+                              className="w-4 h-4 rounded object-contain flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.src = '/logos/bond.png';
+                                e.currentTarget.onerror = null;
+                              }}
+                            />
                             {evaluation.company}
                           </Link>
-                          <span className="text-muted-foreground text-sm">を評価</span>
+                          <span className="text-gray-600 text-sm">を評価</span>
                         </div>
 
                         {/* 評価と星 */}
                         <div className="flex items-center gap-3 mb-3">
                           {renderStars(evaluation.rating)}
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-gray-500">
                             {formatTimestamp(evaluation.timestamp)}
                           </span>
                         </div>
@@ -291,5 +309,7 @@ export default function TimelinePage() {
         </div>
       </div>
     </div>
+    )}
+    </LockedFeature>
   );
 }

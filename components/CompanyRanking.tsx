@@ -193,17 +193,15 @@ export function CompanyRanking({ filterByRole, filterByIndustry, filterByPeriod,
 
                 {/* 企業ロゴ */}
                 <div className="flex-shrink-0">
-                  {company.logoUrl ? (
-                    <img 
-                      src={company.logoUrl} 
-                      alt={company.name}
-                      className="w-16 h-16 rounded-lg object-cover border"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Building2 className="w-8 h-8 text-gray-400" />
-                    </div>
-                  )}
+                  <img
+                    src={company.logoUrl || '/logos/bond.png'}
+                    alt={company.name}
+                    className="w-16 h-16 rounded-lg object-contain border bg-white p-1"
+                    onError={(e) => {
+                      e.currentTarget.src = '/logos/bond.png';
+                      e.currentTarget.onerror = null;
+                    }}
+                  />
                 </div>
 
                 {/* 企業情報 */}

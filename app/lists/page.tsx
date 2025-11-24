@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { BookmarkPlus, Building2, User, Search, Trash2, ExternalLink, Calendar, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { LockedFeature } from '@/components/OnboardingBanner';
 
 interface SavedItem {
   id: string;
@@ -295,8 +296,9 @@ export default function ListsPage() {
     }
   };
 
-  if (!user) {
-    return (
+  return (
+    <LockedFeature featureName="マイリスト">
+    {!user ? (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <BookmarkPlus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -307,18 +309,11 @@ export default function ListsPage() {
           </Link>
         </div>
       </div>
-    );
-  }
-
-  if (loading) {
-    return (
+    ) : loading ? (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
-    );
-  }
-
-  return (
+    ) : (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
@@ -597,5 +592,7 @@ export default function ListsPage() {
         </div>
       </div>
     </div>
+    )}
+    </LockedFeature>
   );
 }

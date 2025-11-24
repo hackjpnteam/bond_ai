@@ -3,12 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --background: 255 255 255;
-  --foreground: 31 28 26;
-  --muted: 111 106 103;
-  --muted-foreground: 111 106 103;
-  --border: 231 216 202;
-  --ring: 156 163 175;
+  --background: 0 0% 100%;
+  --foreground: 20 5% 11%;
+  --muted: 20 4% 42%;
+  --muted-foreground: 20 4% 42%;
+  --border: 27 45% 85%;
+  --ring: 220 9% 65%;
   
   --bg: #F5ECE2;
   --surface: #F8F1E9;

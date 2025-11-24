@@ -303,7 +303,7 @@ export async function buildFallbackResponse({
 
   const completion = await openai.chat.completions.create({
     model,
-    max_tokens: 1200,
+    max_tokens: 4500,  // 1800-2300文字の日本語レポート + JSON構造に必要
     temperature: 0.2,
     messages: [
       {

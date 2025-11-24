@@ -91,7 +91,7 @@ export default function FeaturesPage() {
         </section>
 
         {/* Badge System Details */}
-        <section className="mb-16">
+        <section id="badges" className="mb-16 scroll-mt-20">
           <div className="p-8 rounded-2xl bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 border border-purple-200">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-3">🏆 獲得バッジシステム</h2>

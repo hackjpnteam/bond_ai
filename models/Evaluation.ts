@@ -5,7 +5,7 @@ export interface IEvaluation extends Document {
   companyName: string;
   companySlug: string;
   rating: number;
-  relationshipType: number; // 0-4: 0=未設定, 1=知人, 2=取引先, 3=協業先, 4=投資家
+  relationshipType: number; // 0-5: 0=未設定, 1=知人, 2=取引先, 3=協業先, 4=投資先, 5=株主
   comment: string;
   categories: {
     culture: number;
@@ -55,7 +55,7 @@ const EvaluationSchema: Schema<IEvaluation> = new Schema({
     type: Number,
     required: true,
     min: 0,
-    max: 4,
+    max: 5,
     default: 0
   },
   comment: {

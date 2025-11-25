@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
-import { writeFile, mkdir } from 'fs/promises';
+import { put } from '@vercel/blob';
 import path from 'path';
-import { existsSync } from 'fs';
 
 export const POST = requireAuth(async (request: NextRequest, user) => {
   try {
@@ -31,59 +30,38 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
 
     // ファイル拡張子を取得
     const fileExtension = path.extname(file.name) || '.png';
-    
-    // 保存先ディレクトリを確保
-    const uploadDir = path.join(process.cwd(), 'public', 'logos');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
 
     // ファイル名を会社スラッグベースで生成
-    const fileName = `${companySlug}${fileExtension}`;
-    const filePath = path.join(uploadDir, fileName);
+    const fileName = `logos/${companySlug}${fileExtension}`;
 
-    // 古いロゴファイルをクリーンアップ（同じ会社の別ファイル名を削除）
-    const { readdirSync, unlinkSync } = await import('fs');
-    try {
-      const existingFiles = readdirSync(uploadDir);
-      const companyNameVariants = [
-        companySlug.toLowerCase(),
-        companySlug.replace(/^株式会社/, '').toLowerCase(),
-        companySlug.replace(/^株式会社/, '').trim()
-      ];
-      
-      existingFiles.forEach(file => {
-        if (file !== fileName && file.endsWith('.png')) {
-          const fileBase = file.replace(/\.[^/.]+$/, '').toLowerCase();
-          if (companyNameVariants.some(variant => fileBase.includes(variant) || variant.includes(fileBase))) {
-            try {
-              unlinkSync(path.join(uploadDir, file));
-              console.log(`Removed old logo file: ${file}`);
-            } catch (error) {
-              console.log(`Could not remove old logo file: ${file}`);
-            }
-          }
-        }
-      });
-    } catch (error) {
-      console.log('Could not cleanup old files:', error.message);
-    }
-
-    // 新しいファイルを保存
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
+    // Vercel Blobにアップロード
+    const blob = await put(fileName, file, {
+      access: 'public',
+      addRandomSuffix: false, // 同じファイル名で上書き
+    });
 
     console.log(`Company logo uploaded: ${fileName} for ${companySlug}`);
 
     return NextResponse.json({
       success: true,
       message: '会社ロゴがアップロードされました',
-      logoUrl: `/logos/${fileName}`,
-      fileName
+      logoUrl: blob.url,
+      fileName: blob.pathname
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Company logo upload error:', error);
-    return NextResponse.json({ error: 'ロゴのアップロードに失敗しました' }, { status: 500 });
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code
+    });
+
+    // より詳細なエラーメッセージを返す
+    const errorMessage = error?.message || 'ロゴのアップロードに失敗しました';
+    return NextResponse.json({
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+    }, { status: 500 });
   }
 });

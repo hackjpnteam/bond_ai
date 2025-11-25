@@ -11,4 +11,4 @@ export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
 
 # Created by `pipx` on 2025-11-02 02:45:41
 export PATH="$PATH:/Users/hikarutomura/.local/bin"
-export OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxx"
+# OPENAI_API_KEY is set in .env.local, not here

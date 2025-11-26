@@ -7,23 +7,24 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Normalize company name to logo path
- * Strips common prefixes like 株式会社, converts to lowercase
+ * Returns API endpoint for logo (stored in MongoDB)
  */
 export function getCompanyLogoPath(companyName: string): string {
-  if (!companyName) return '/logos/bond.png';
+  if (!companyName) return '/bond-logo.png';
 
-  // Strip common prefixes
+  // Strip common prefixes for slug
   let normalized = companyName
     .replace(/^株式会社/g, '')
     .replace(/^有限会社/g, '')
     .replace(/^合同会社/g, '')
     .replace(/株式会社$/g, '')
-    .trim();
+    .trim()
+    .toLowerCase();
 
   // If empty after stripping, use original
   if (!normalized) {
-    normalized = companyName;
+    normalized = companyName.toLowerCase();
   }
 
-  return `/logos/${encodeURIComponent(normalized)}.png`;
+  return `/api/company-logo/${encodeURIComponent(normalized)}`;
 }

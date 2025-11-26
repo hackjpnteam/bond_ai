@@ -264,7 +264,7 @@ export default function TimelinePage() {
                               alt={evaluation.company}
                               className="w-4 h-4 rounded object-contain flex-shrink-0"
                               onError={(e) => {
-                                e.currentTarget.src = '/logos/bond.png';
+                                e.currentTarget.src = '/bond-logo.png';
                                 e.currentTarget.onerror = null;
                               }}
                             />

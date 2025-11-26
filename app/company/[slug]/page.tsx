@@ -1126,12 +1126,12 @@ URL: ${window.location.href}`;
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden relative group cursor-pointer"
                      onClick={() => document.getElementById('logo-upload')?.click()}>
                   <img
-                    src={`/logos/${companyData.slug || companyName.toLowerCase()}.png`}
+                    src={`/api/company-logo/${encodeURIComponent(companyData.slug || companyName.toLowerCase())}`}
                     alt={`${companyData.name} ロゴ`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       // フォールバック: デフォルト画像を使用
-                      e.currentTarget.src = '/default-company.png';
+                      e.currentTarget.src = '/bond-logo.png';
                       e.currentTarget.onerror = null; // 無限ループを防ぐ
                     }}
                   />
@@ -1680,11 +1680,11 @@ URL: ${window.location.href}`;
                           <div className="flex items-start gap-3">
                             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                               <img
-                                src={`/logos/${company.slug}.png`}
+                                src={`/api/company-logo/${encodeURIComponent(company.slug)}`}
                                 alt={`${company.name} ロゴ`}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
-                                  e.currentTarget.src = '/default-company.png';
+                                  e.currentTarget.src = '/bond-logo.png';
                                   e.currentTarget.onerror = null;
                                 }}
                               />

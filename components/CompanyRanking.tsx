@@ -194,11 +194,11 @@ export function CompanyRanking({ filterByRole, filterByIndustry, filterByPeriod,
                 {/* 企業ロゴ */}
                 <div className="flex-shrink-0">
                   <img
-                    src={company.logoUrl || '/logos/bond.png'}
+                    src={company.logoUrl || `/api/company-logo/${encodeURIComponent(company.slug)}`}
                     alt={company.name}
                     className="w-16 h-16 rounded-lg object-contain border bg-white p-1"
                     onError={(e) => {
-                      e.currentTarget.src = '/logos/bond.png';
+                      e.currentTarget.src = '/bond-logo.png';
                       e.currentTarget.onerror = null;
                     }}
                   />

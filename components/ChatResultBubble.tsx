@@ -476,7 +476,7 @@ export function ChatResultBubble({ result, mode, company }: ChatResultBubbleProp
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden">
               <img
-                src={`/logos/${company.toLowerCase()}.png`}
+                src={`/api/company-logo/${encodeURIComponent(company.toLowerCase())}`}
                 alt={`${company} ロゴ`}
                 className="w-full h-full object-cover"
                 onError={(e) => {

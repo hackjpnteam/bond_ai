@@ -99,113 +99,161 @@ export default function FeaturesPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Badge 1 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Award className="w-6 h-6 text-yellow-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Award className="w-7 h-7 text-yellow-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">評価王</h4>
+                  <p className="text-sm text-gray-600">評価を10件以上投稿</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">評価王</h4>
-              <p className="text-xs text-yellow-600">★★★</p>
             </div>
 
             {/* Badge 2 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Users className="w-6 h-6 text-blue-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Users className="w-7 h-7 text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">ネットワーカー</h4>
+                  <p className="text-sm text-gray-600">10人以上とつながる</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">ネットワーカー</h4>
-              <p className="text-xs text-blue-600">★★★★</p>
             </div>
 
             {/* Badge 3 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-7 h-7 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">早期発見者</h4>
+                  <p className="text-sm text-gray-600">新規企業に最初の評価を投稿</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">早期発見者</h4>
-              <p className="text-xs text-green-600">★★★★★</p>
             </div>
 
             {/* Badge 4 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Star className="w-6 h-6 text-purple-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Star className="w-7 h-7 text-purple-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">信頼マスター</h4>
+                  <p className="text-sm text-gray-600">信頼スコア80以上を達成</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">信頼マスター</h4>
-              <p className="text-xs text-purple-600">★★★★★</p>
             </div>
 
             {/* Badge 5 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <MessageCircle className="w-6 h-6 text-orange-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <MessageCircle className="w-7 h-7 text-orange-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">レビュアー</h4>
+                  <p className="text-sm text-gray-600">初めての評価を投稿</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">レビュアー</h4>
-              <p className="text-xs text-orange-600">★★</p>
             </div>
 
             {/* Badge 6 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Target className="w-6 h-6 text-red-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Target className="w-7 h-7 text-red-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">精度エキスパート</h4>
+                  <p className="text-sm text-gray-600">評価が5回以上参考になった</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">精度エキスパート</h4>
-              <p className="text-xs text-red-600">★★★★</p>
             </div>
 
             {/* Badge 7 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Rocket className="w-6 h-6 text-indigo-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Rocket className="w-7 h-7 text-indigo-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">支援者</h4>
+                  <p className="text-sm text-gray-600">スタートアップを3社以上支援</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">支援者</h4>
-              <p className="text-xs text-indigo-600">★★★</p>
             </div>
 
             {/* Badge 8 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Heart className="w-6 h-6 text-pink-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Heart className="w-7 h-7 text-pink-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">応援団長</h4>
+                  <p className="text-sm text-gray-600">企業を10社以上お気に入り登録</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">応援団長</h4>
-              <p className="text-xs text-pink-600">★★</p>
             </div>
 
             {/* Badge 9 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Shield className="w-6 h-6 text-teal-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-7 h-7 text-teal-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">ベテラン</h4>
+                  <p className="text-sm text-gray-600">30日以上連続でログイン</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">ベテラン</h4>
-              <p className="text-xs text-teal-600">★★★</p>
             </div>
 
             {/* Badge 10 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Eye className="w-6 h-6 text-cyan-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-cyan-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Eye className="w-7 h-7 text-cyan-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">ウォッチャー</h4>
+                  <p className="text-sm text-gray-600">企業を初めてお気に入り登録</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">ウォッチャー</h4>
-              <p className="text-xs text-cyan-600">★</p>
             </div>
 
             {/* Badge 11 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Sparkles className="w-6 h-6 text-amber-600" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-7 h-7 text-amber-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">インフルエンサー</h4>
+                  <p className="text-sm text-gray-600">プロフィールが100回以上閲覧された</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">インフルエンサー</h4>
-              <p className="text-xs text-amber-600">★★★★</p>
             </div>
 
             {/* Badge 12 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow text-center">
-              <div className="w-12 h-12 bg-gradient-to-r from-yellow-200 to-yellow-400 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Crown className="w-6 h-6 text-yellow-700" />
+            <div className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-r from-yellow-200 to-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Crown className="w-7 h-7 text-yellow-700" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base mb-1">レジェンド</h4>
+                  <p className="text-sm text-gray-600">全バッジを獲得</p>
+                </div>
               </div>
-              <h4 className="font-bold text-sm mb-1">レジェンド</h4>
-              <p className="text-xs text-yellow-700">★★★★★</p>
             </div>
           </div>
         </section>

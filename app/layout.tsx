@@ -18,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja" className={`${inter.variable} ${fraunces.variable} ${caveat.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="google-site-verification" content="fQTMXr77-Oc4xTGcVYlXmrHcXHuKyEOhJfHrWkiXEE0" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

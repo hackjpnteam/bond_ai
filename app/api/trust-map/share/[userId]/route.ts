@@ -3,24 +3,35 @@ import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import Evaluation from '@/models/Evaluation';
 import Connection from '@/models/Connection';
+import mongoose from 'mongoose';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     await connectDB();
 
-    const userId = params.userId;
+    const { userId } = await params;
 
-    // ユーザー情報を取得
-    const user = await User.findById(userId).lean();
+    // ユーザー情報を取得（ObjectIdまたはusernameで検索）
+    let user;
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      user = await User.findById(userId).lean();
+    }
+    if (!user) {
+      // usernameで検索
+      user = await User.findOne({ username: userId }).lean();
+    }
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // ユーザーの評価を取得
-    const evaluations = await Evaluation.find({ userId: userId }).lean();
+    const odlId = (user as any)._id;
+    const odlIdStr = odlId.toString();
+
+    // ユーザーの評価を取得（文字列IDで検索 - Evaluationモデルの仕様）
+    const evaluations = await Evaluation.find({ userId: odlIdStr }).lean();
 
     // 企業データを構築
     const companies = evaluations.map((evaluation: any) => ({
@@ -44,14 +55,14 @@ export async function GET(
       return acc;
     }, []);
 
-    // コネクションを取得
+    // コネクションを取得（ObjectIdで検索）
     const connections = await Connection.find({
-      users: userId,
+      users: odlId,
       status: 'active'
     }).populate('users', 'name image').lean();
 
     const connectedUsers = connections.map((conn: any) => {
-      const otherUser = conn.users.find((u: any) => u._id.toString() !== userId);
+      const otherUser = conn.users.find((u: any) => u._id.toString() !== odlIdStr);
       if (!otherUser) return null;
       return {
         id: otherUser._id.toString(),
@@ -64,7 +75,7 @@ export async function GET(
 
     const response = {
       me: {
-        id: (user as any)._id.toString(),
+        id: odlIdStr,
         name: (user as any).name,
         type: 'person' as const,
         isCenter: true,

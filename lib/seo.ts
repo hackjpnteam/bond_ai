@@ -10,8 +10,9 @@ export interface SEOConfig {
   jsonLd?: object
 }
 
-const BASE_URL = 'https://bond-launch.com'
-const SITE_NAME = 'Bond Launch'
+// 本番ドメインは bond.giving
+const BASE_URL = 'https://bond.giving'
+const SITE_NAME = 'Bond'
 const DEFAULT_OG_IMAGE = `${BASE_URL}/og-image.png`
 
 export const defaultSEO: Metadata = {

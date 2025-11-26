@@ -1,18 +1,28 @@
 /**
- * Trust Map シェア用 Open Graph 画像
- * - ユーザーの信頼ネットワークを動的に可視化したOGP画像を生成
- * - 今後の拡張: APIから取得したユーザー名や統計情報をより詳細に表示可能
+ * Trust Map OGP画像生成（短縮URL用）
+ * ルート: /trustmap/[id]
+ * - Next.js のファイルベース Open Graph 画像機能を利用
+ * - Edge Runtime で動的にPNG画像を生成
+ * - 将来の拡張: id からユーザー名を取得して表示名に反映
  */
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
-export const alt = '信頼ネットワーク - Bond'
-export const size = { width: 1200, height: 630 }
+
+export const size = {
+  width: 1200,
+  height: 630,
+}
+
 export const contentType = 'image/png'
 
-// MongoDB接続はEdge Runtimeで使えないため、APIから取得
+type OgImageProps = {
+  params: Promise<{ id: string }>
+}
+
+// APIからユーザーデータを取得
 async function getUserData(userId: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bond.giving'
   try {
     const res = await fetch(`${baseUrl}/api/trust-map/share/${userId}`, {
       cache: 'no-store',
@@ -24,15 +34,16 @@ async function getUserData(userId: string) {
   }
 }
 
-export default async function Image({ params }: { params: { userId: string } }) {
-  const data = await getUserData(params.userId)
+export default async function Image({ params }: OgImageProps) {
+  const { id } = await params
+  const data = await getUserData(id)
 
-  const userName = data?.me?.name || 'ユーザー'
+  const userName = data?.me?.name || id
   const companyCount = data?.companies?.length || 0
   const connectionCount = data?.users?.length || 0
 
   // ネットワークノードの位置を計算
-  const nodes = []
+  const nodes: Array<{ x: number; y: number; type: string }> = []
   const totalNodes = Math.min(companyCount + connectionCount, 8)
 
   for (let i = 0; i < totalNodes; i++) {
@@ -193,6 +204,19 @@ export default async function Image({ params }: { params: { userId: string } }) 
         >
           <span style={{ fontSize: 16, color: '#999' }}>Powered by</span>
           <span style={{ fontSize: 20, fontWeight: 'bold', color: '#E8B4B8' }}>Bond</span>
+        </div>
+
+        {/* URL */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            left: 30,
+            fontSize: 16,
+            color: '#999',
+          }}
+        >
+          bond.giving
         </div>
       </div>
     ),

@@ -119,6 +119,25 @@ const UserSchema: Schema<IUser> = new Schema({
   timestamps: true
 });
 
+// Generate unique username from email if not set
+UserSchema.pre('save', async function(next) {
+  // usernameが未設定の場合、emailから自動生成
+  if (!this.username && this.email) {
+    const baseUsername = this.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    let username = baseUsername;
+    let counter = 1;
+
+    // 同じusernameが存在する場合、数字を付けてユニークにする
+    const UserModel = mongoose.models.User || mongoose.model('User', UserSchema);
+    while (await UserModel.exists({ username, _id: { $ne: this._id } })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+    this.username = username;
+  }
+  next();
+});
+
 // Hash password before saving
 UserSchema.pre('save', async function(next) {
   if (!this.isModified('password') || !this.password) return next();

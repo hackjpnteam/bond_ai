@@ -48,6 +48,7 @@ export async function GET(
       const relationshipType = evaluation.relationshipType ?? 0;
 
       return {
+        id: evaluation._id.toString(),
         companyName: evaluation.companyName,
         companySlug: evaluation.companySlug,
         rating: evaluation.rating,
@@ -55,6 +56,7 @@ export async function GET(
         relationshipType: relationshipType,
         relationshipLabel: getRelationshipLabel(relationshipType),
         relationshipSource: 'evaluation',
+        categories: evaluation.categories,
         createdAt: evaluation.createdAt,
         updatedAt: evaluation.updatedAt
       };

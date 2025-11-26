@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import {
   ArrowLeft, User, MapPin, Calendar, Star, Users, MessageCircle,
   Award, TrendingUp, ExternalLink, Shield, Mail, Settings,
-  Clock, Eye, Plus, Loader2, Check, X, Building2
+  Clock, Eye, Plus, Loader2, Check, X, Building2, Pencil
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { getRelationshipLabel } from '@/lib/relationship'
+import EditEvaluationModal from '@/components/EditEvaluationModal'
 
 interface UserProfile {
   id: string
@@ -60,6 +61,7 @@ interface UserProfile {
     profileImage?: string
   }[]
   companyRelationships?: {
+    id: string
     companyName: string
     companySlug: string
     rating: number
@@ -67,6 +69,13 @@ interface UserProfile {
     relationshipLabel: string
     relationshipSource?: 'evaluation' | 'label' | 'categories' | 'role' | 'default'
     comment?: string
+    categories?: {
+      culture: number
+      growth: number
+      workLifeBalance: number
+      compensation: number
+      leadership: number
+    }
     createdAt?: string
     updatedAt?: string
   }[]
@@ -88,6 +97,8 @@ export default function UserProfilePage() {
   const [newSkill, setNewSkill] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [relationshipFilter, setRelationshipFilter] = useState<number | 'all'>('all')
+  const [editingEvaluation, setEditingEvaluation] = useState<UserProfile['companyRelationships'][number] | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   useEffect(() => {
     fetchUserProfile()
@@ -300,6 +311,25 @@ export default function UserProfilePage() {
     // メッセージ作成ページに遷移
     const composeUrl = `/messages/compose?to=${encodeURIComponent(user.email || user.username)}&subject=${encodeURIComponent(`${user.name}さんへのメッセージ`)}`
     window.location.href = composeUrl
+  }
+
+  const handleEditEvaluation = (relationship: UserProfile['companyRelationships'][number]) => {
+    setEditingEvaluation(relationship)
+    setIsEditModalOpen(true)
+  }
+
+  const handleSaveEvaluation = (updatedEvaluation: any) => {
+    if (!user || !user.companyRelationships) return
+
+    // Update the local state with the new evaluation data
+    const updatedRelationships = user.companyRelationships.map(rel =>
+      rel.id === updatedEvaluation.id ? { ...rel, ...updatedEvaluation } : rel
+    )
+
+    setUser({
+      ...user,
+      companyRelationships: updatedRelationships
+    })
   }
 
   const getRoleLabel = (role: string) => {
@@ -617,11 +647,27 @@ export default function UserProfilePage() {
                             {relationship.createdAt
                               ? `${new Date(relationship.createdAt).toLocaleDateString('ja-JP')}に評価`
                               : '日付情報なし'}
+                            {relationship.updatedAt && relationship.updatedAt !== relationship.createdAt && (
+                              <span className="ml-2 text-blue-500">
+                                (編集済み)
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                          {relationship.relationshipLabel || getRelationshipLabel(relationship.relationshipType)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                            {relationship.relationshipLabel || getRelationshipLabel(relationship.relationshipType)}
+                          </span>
+                          {isOwnProfile && (
+                            <button
+                              onClick={() => handleEditEvaluation(relationship)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                              title="評価を編集"
+                            >
+                              <Pencil className="w-4 h-4 text-gray-500 hover:text-blue-600" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className="text-xs text-gray-500 mb-3">
                         {getRelationshipReason(relationship.relationshipSource, relationship)}
@@ -935,6 +981,17 @@ export default function UserProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Evaluation Modal */}
+      <EditEvaluationModal
+        evaluation={editingEvaluation}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingEvaluation(null)
+        }}
+        onSave={handleSaveEvaluation}
+      />
     </div>
   )
 }

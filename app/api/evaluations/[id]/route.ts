@@ -4,32 +4,34 @@ import connectDB from '@/lib/mongodb';
 import Evaluation from '@/models/Evaluation';
 
 // PUT /api/evaluations/[id] - 評価を更新
-const RELATIONSHIP_OPTIONS = ['shareholder', 'executive', 'employee', 'partner', 'customer', 'other']
-
 export const PUT = requireAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
   try {
     await connectDB();
 
     const { id } = await params;
     const body = await request.json();
-    const { rating, comment, categories, reason, relationship } = body;
+    const { rating, comment, categories, reason, relationshipType } = body;
 
-    if (relationship && !RELATIONSHIP_OPTIONS.includes(relationship)) {
-      return new Response(
-        JSON.stringify({ error: '無効な関係性が指定されました' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+    // relationshipTypeのバリデーション (0-5)
+    if (relationshipType !== undefined) {
+      const relType = Number(relationshipType);
+      if (isNaN(relType) || relType < 0 || relType > 5) {
+        return new Response(
+          JSON.stringify({ error: '無効な関係性が指定されました' }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
     }
-    
+
     // 評価を取得
     const evaluation = await Evaluation.findOne({
       _id: id,
       userId: user.id
     });
-    
+
     if (!evaluation) {
       return new Response(
         JSON.stringify({ error: '評価が見つかりません' }),
@@ -39,19 +41,19 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
         }
       );
     }
-    
+
     // 編集履歴に追加
     if (!evaluation.editHistory) {
       evaluation.editHistory = [];
     }
-    
+
     evaluation.editHistory.push({
       previousRating: evaluation.rating,
       previousComment: evaluation.comment,
       editedAt: new Date(),
       reason: reason || ''
     });
-    
+
     // 新しい値を設定
     if (typeof rating === 'number') {
       evaluation.rating = rating;
@@ -62,12 +64,12 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
     if (categories) {
       evaluation.categories = categories;
     }
-    if (relationship) {
-      evaluation.relationship = relationship;
+    if (relationshipType !== undefined) {
+      evaluation.relationshipType = Number(relationshipType);
     }
-    
+
     await evaluation.save();
-    
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -77,7 +79,7 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
           rating: evaluation.rating,
           comment: evaluation.comment,
           categories: evaluation.categories,
-          relationship: evaluation.relationship,
+          relationshipType: evaluation.relationshipType,
           editHistory: evaluation.editHistory,
           updatedAt: evaluation.updatedAt
         }
@@ -87,7 +89,7 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
         headers: { 'Content-Type': 'application/json' }
       }
     );
-    
+
   } catch (error) {
     console.error('Update evaluation error:', error);
     return new Response(

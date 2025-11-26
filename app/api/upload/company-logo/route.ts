@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
-import { put } from '@vercel/blob';
-import path from 'path';
+import connectDB from '@/lib/mongodb';
 
 export const POST = requireAuth(async (request: NextRequest, user) => {
   try {
@@ -17,9 +16,9 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
       return NextResponse.json({ error: '会社スラッグが指定されていません' }, { status: 400 });
     }
 
-    // ファイルサイズ制限 (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'ファイルサイズは5MB以下にしてください' }, { status: 400 });
+    // ファイルサイズ制限 (2MB - Base64保存なので小さめに)
+    if (file.size > 2 * 1024 * 1024) {
+      return NextResponse.json({ error: 'ファイルサイズは2MB以下にしてください' }, { status: 400 });
     }
 
     // ファイル形式チェック
@@ -28,40 +27,41 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
       return NextResponse.json({ error: '対応している画像形式: JPEG, PNG, GIF, WebP' }, { status: 400 });
     }
 
-    // ファイル拡張子を取得
-    const fileExtension = path.extname(file.name) || '.png';
+    // Base64に変換
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const base64 = buffer.toString('base64');
+    const dataUrl = `data:${file.type};base64,${base64}`;
 
-    // ファイル名を会社スラッグベースで生成
-    const fileName = `logos/${companySlug}${fileExtension}`;
+    // MongoDBに保存
+    await connectDB();
+    const db = (await import('mongoose')).connection.db;
 
-    // Vercel Blobにアップロード
-    const blob = await put(fileName, file, {
-      access: 'public',
-      addRandomSuffix: false, // 同じファイル名で上書き
-    });
+    await db?.collection('companyLogos').updateOne(
+      { slug: companySlug },
+      {
+        $set: {
+          slug: companySlug,
+          logo: dataUrl,
+          mimeType: file.type,
+          updatedAt: new Date(),
+          updatedBy: user._id
+        }
+      },
+      { upsert: true }
+    );
 
-    console.log(`Company logo uploaded: ${fileName} for ${companySlug}`);
+    console.log(`Company logo saved to MongoDB: ${companySlug}`);
 
     return NextResponse.json({
       success: true,
       message: '会社ロゴがアップロードされました',
-      logoUrl: blob.url,
-      fileName: blob.pathname
+      logoUrl: `/api/company-logo/${companySlug}`,
     });
 
   } catch (error: any) {
     console.error('Company logo upload error:', error);
-    console.error('Error details:', {
-      message: error?.message,
-      stack: error?.stack,
-      code: error?.code
-    });
-
-    // より詳細なエラーメッセージを返す
-    const errorMessage = error?.message || 'ロゴのアップロードに失敗しました';
     return NextResponse.json({
-      error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      error: error?.message || 'ロゴのアップロードに失敗しました'
     }, { status: 500 });
   }
 });

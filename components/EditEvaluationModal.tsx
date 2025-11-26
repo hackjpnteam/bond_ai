@@ -42,6 +42,7 @@ const RELATIONSHIP_OPTIONS = [
   { value: 3, label: '協業先' },
   { value: 4, label: '投資先' },
   { value: 5, label: '株主' },
+  { value: 6, label: '友達' },
 ]
 
 const CATEGORY_LABELS = {

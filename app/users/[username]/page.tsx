@@ -619,6 +619,16 @@ export default function UserProfilePage() {
                     知人
                   </button>
                   <button
+                    onClick={() => setRelationshipFilter(6)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      relationshipFilter === 6
+                        ? 'bg-cyan-600 text-white'
+                        : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100'
+                    }`}
+                  >
+                    友達
+                  </button>
+                  <button
                     onClick={() => setRelationshipFilter(0)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                       relationshipFilter === 0

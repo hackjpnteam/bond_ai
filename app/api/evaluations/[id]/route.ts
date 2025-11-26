@@ -12,10 +12,10 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
     const body = await request.json();
     const { rating, comment, categories, reason, relationshipType } = body;
 
-    // relationshipTypeのバリデーション (0-5)
+    // relationshipTypeのバリデーション (0-6)
     if (relationshipType !== undefined) {
       const relType = Number(relationshipType);
-      if (isNaN(relType) || relType < 0 || relType > 5) {
+      if (isNaN(relType) || relType < 0 || relType > 6) {
         return new Response(
           JSON.stringify({ error: '無効な関係性が指定されました' }),
           {

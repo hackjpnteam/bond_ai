@@ -1,7 +1,7 @@
 /**
  * 関係性システム - シンプルで一貫性のある実装
  *
- * データベース: relationshipType (number 0-5)
+ * データベース: relationshipType (number 0-6)
  * 表示: 日本語ラベル
  */
 
@@ -12,7 +12,8 @@ export const RELATIONSHIP_TYPES = {
   CLIENT: 2,     // 取引先
   PARTNER: 3,    // 協業先
   INVESTOR: 4,   // 投資先
-  SHAREHOLDER: 5 // 株主
+  SHAREHOLDER: 5, // 株主
+  FRIEND: 6      // 友達
 } as const;
 
 // 日本語ラベルマッピング
@@ -22,7 +23,8 @@ const RELATIONSHIP_LABELS: Record<number, string> = {
   2: '取引先',
   3: '協業先',
   4: '投資先',
-  5: '株主'
+  5: '株主',
+  6: '友達'
 };
 
 // カラークラスマッピング
@@ -32,7 +34,8 @@ const RELATIONSHIP_COLORS: Record<number, string> = {
   2: 'bg-green-100 text-green-700',
   3: 'bg-purple-100 text-purple-700',
   4: 'bg-orange-100 text-orange-700',
-  5: 'bg-pink-100 text-pink-700'
+  5: 'bg-pink-100 text-pink-700',
+  6: 'bg-cyan-100 text-cyan-700'
 };
 
 /**
@@ -64,5 +67,6 @@ export const RELATIONSHIP_OPTIONS = [
   { value: 2, label: '取引先' },
   { value: 3, label: '協業先' },
   { value: 4, label: '投資先' },
-  { value: 5, label: '株主' }
+  { value: 5, label: '株主' },
+  { value: 6, label: '友達' }
 ];

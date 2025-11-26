@@ -150,7 +150,7 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
     }
 
     const relationshipTypeNum = Number(relationshipType);
-    if (isNaN(relationshipTypeNum) || relationshipTypeNum < 0 || relationshipTypeNum > 5) {
+    if (isNaN(relationshipTypeNum) || relationshipTypeNum < 0 || relationshipTypeNum > 6) {
       return new Response(
         JSON.stringify({ error: '関係性の値が不正です' }),
         {

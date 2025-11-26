@@ -44,7 +44,7 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
           logo: dataUrl,
           mimeType: file.type,
           updatedAt: new Date(),
-          updatedBy: user._id
+          updatedBy: user.id
         }
       },
       { upsert: true }

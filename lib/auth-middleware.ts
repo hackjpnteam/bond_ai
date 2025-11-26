@@ -29,10 +29,12 @@ export async function validateSession(request: NextRequest): Promise<Authenticat
 
     // 【優先1】NextAuth JWTトークンをチェック
     try {
+      console.log('🔍 [validateSession] NEXTAUTH_SECRET exists:', !!process.env.NEXTAUTH_SECRET);
       const token = await getToken({
         req: request as any,
         secret: process.env.NEXTAUTH_SECRET
       });
+      console.log('🔍 [validateSession] Token result:', token ? 'found' : 'not found');
 
       if (token && token.email) {
         console.log('✅ [validateSession] NextAuth token found:', token.email);

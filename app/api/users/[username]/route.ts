@@ -15,12 +15,12 @@ export async function GET(
 
     const { username } = await params;
 
-    // ユーザーを検索
+    // ユーザーを検索（usernameまたはemailで完全一致）
+    // NOTE: nameでの検索は削除 - 名前の重複で別ユーザーがヒットする問題があった
     const user = await User.findOne({
       $or: [
         { username: username },
-        { email: username },
-        { name: username }
+        { email: username }
       ]
     }).lean();
 

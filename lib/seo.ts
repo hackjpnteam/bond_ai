@@ -18,8 +18,8 @@ const DEFAULT_OG_IMAGE = `${BASE_URL}/og-image.png`
 export const defaultSEO: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: 'Bond Launch - 信頼ネットワークで企業評価を可視化するプラットフォーム',
-    template: '%s | Bond Launch'
+    default: 'Bond - 信頼ネットワークで企業評価を可視化するプラットフォーム',
+    template: '%s | Bond'
   },
   description: '透明性の高い評価システムで企業の信頼度を可視化。投資家、従業員、顧客からの実際の評価でスタートアップの成長を支援するプラットフォーム。',
   icons: {
@@ -32,9 +32,9 @@ export const defaultSEO: Metadata = {
     'ベンチャー', '企業分析', 'AI企業', 'ギグー', 'StartupHub', 'DigitalSolutions',
     '企業ランキング', '会社評価', '投資判断', 'デューデリジェンス'
   ],
-  authors: [{ name: 'Bond Launch Team' }],
-  creator: 'Bond Launch',
-  publisher: 'Bond Launch',
+  authors: [{ name: 'Bond Team' }],
+  creator: 'Bond',
+  publisher: 'Bond',
   formatDetection: {
     email: false,
     address: false,
@@ -43,7 +43,7 @@ export const defaultSEO: Metadata = {
   openGraph: {
     type: 'website',
     siteName: SITE_NAME,
-    title: 'Bond Launch - 企業評価プラットフォーム',
+    title: 'Bond - 企業評価プラットフォーム',
     description: '透明性の高い評価システムで企業の信頼度を可視化するプラットフォーム',
     url: BASE_URL,
     images: [
@@ -51,17 +51,17 @@ export const defaultSEO: Metadata = {
         url: DEFAULT_OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: 'Bond Launch - 企業評価プラットフォーム',
+        alt: 'Bond - 企業評価プラットフォーム',
       },
     ],
     locale: 'ja_JP',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bond Launch - 企業評価プラットフォーム',
+    title: 'Bond - 企業評価プラットフォーム',
     description: '透明性の高い評価システムで企業の信頼度を可視化',
     images: [DEFAULT_OG_IMAGE],
-    creator: '@BondLaunch',
+    creator: '@Bond_giving',
   },
   robots: {
     index: true,
@@ -112,7 +112,7 @@ export function generateSEO(config: SEOConfig): Metadata {
       title,
       description,
       images: [ogImage],
-      creator: '@BondLaunch',
+      creator: '@Bond_giving',
     },
     robots: {
       index: !config.noIndex,
@@ -129,8 +129,8 @@ export function generateOrganizationJsonLd() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Bond Launch',
-    alternateName: 'ボンドローンチ',
+    name: 'Bond',
+    alternateName: 'ボンド',
     url: BASE_URL,
     logo: `${BASE_URL}/logo.png`,
     description: '透明性の高い評価システムで企業の信頼度を可視化するプラットフォーム',
@@ -145,12 +145,12 @@ export function generateOrganizationJsonLd() {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      email: 'support@bond-launch.com',
+      email: 'support@bond.giving',
       availableLanguage: 'Japanese'
     },
     sameAs: [
-      'https://twitter.com/BondLaunch',
-      'https://linkedin.com/company/bond-launch',
+      'https://twitter.com/Bond_giving',
+      'https://linkedin.com/company/bond-giving',
     ],
     aggregateRating: {
       '@type': 'AggregateRating',

@@ -216,14 +216,14 @@ export async function GET(request: NextRequest) {
         achievements: [{
           id: 'member',
           title: 'メンバー',
-          description: 'Bond Launchのメンバー',
+          description: 'Bondのメンバー',
           earnedDate: user.createdAt || new Date().toISOString(),
           badge: '🎯'
         }],
         recentActivity: [{
           id: 'joined',
           type: 'connection' as const,
-          description: 'Bond Launchに参加しました',
+          description: 'Bondに参加しました',
           date: new Date(user.createdAt || new Date()).toLocaleDateString('ja-JP')
         }]
       }

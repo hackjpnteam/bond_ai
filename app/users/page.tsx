@@ -250,7 +250,7 @@ export default function UsersPage() {
             ユーザーディレクトリ
           </h1>
           <p className="text-gray-600">
-            Bond Launchコミュニティのメンバーを探索し、つながりを築きましょう
+            Bondコミュニティのメンバーを探索し、つながりを築きましょう
           </p>
         </div>
       </div>

@@ -169,7 +169,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : `${companyName}の企業情報と評判をチェック。${industry && industry !== '情報収集中...' ? `${industry}業界。` : ''}${founded && founded !== '情報収集中' ? `設立: ${founded}。` : ''}${employees && employees !== '情報収集中' ? `従業員数: ${employees}。` : ''}Bondで実際の関係者からの評価を確認できます。`;
 
   // 構造化データ用のURL
-  const canonicalUrl = `https://bond.co.jp/company/${encodeURIComponent(slug)}`;
+  const canonicalUrl = `https://bond.giving/company/${encodeURIComponent(slug)}`;
 
   return {
     title,
@@ -201,7 +201,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: ogDescription,
       images: [
         {
-          url: `https://bond.co.jp/api/og/company?name=${encodeURIComponent(companyName)}&rating=${averageRating.toFixed(1)}&industry=${encodeURIComponent(industry || '')}`,
+          url: `https://bond.giving/api/og/company?name=${encodeURIComponent(companyName)}&rating=${averageRating.toFixed(1)}&industry=${encodeURIComponent(industry || '')}`,
           width: 1200,
           height: 630,
           alt: `${companyName}の企業情報`,
@@ -212,8 +212,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: 'summary_large_image',
       title: `${companyName}の評判・口コミ | Bond`,
       description: ogDescription,
-      site: '@BondJP',
-      creator: '@BondJP',
+      site: '@Bond_giving',
+      creator: '@Bond_giving',
     },
     other: {
       'article:author': 'Bond',
@@ -256,7 +256,7 @@ function generateStructuredData(company: any, evaluations: any[], slug: string) 
 
   const companyName = company.name;
   const cleanDesc = cleanDescription(company.description);
-  const canonicalUrl = `https://bond.co.jp/company/${encodeURIComponent(slug)}`;
+  const canonicalUrl = `https://bond.giving/company/${encodeURIComponent(slug)}`;
   const sources = company.sources || [];
 
   const schemas: any[] = [];
@@ -326,9 +326,9 @@ function generateStructuredData(company: any, evaluations: any[], slug: string) 
     inLanguage: 'ja',
     isPartOf: {
       '@type': 'WebSite',
-      '@id': 'https://bond.co.jp/#website',
+      '@id': 'https://bond.giving/#website',
       name: 'Bond',
-      url: 'https://bond.co.jp',
+      url: 'https://bond.giving',
     },
     about: {
       '@id': `${canonicalUrl}#organization`,
@@ -353,13 +353,13 @@ function generateStructuredData(company: any, evaluations: any[], slug: string) 
         '@type': 'ListItem',
         position: 1,
         name: 'Bond',
-        item: 'https://bond.co.jp',
+        item: 'https://bond.giving',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: '企業検索',
-        item: 'https://bond.co.jp/search',
+        item: 'https://bond.giving/search',
       },
       {
         '@type': 'ListItem',
@@ -383,15 +383,15 @@ function generateStructuredData(company: any, evaluations: any[], slug: string) 
       author: {
         '@type': 'Organization',
         name: 'Bond',
-        url: 'https://bond.co.jp',
+        url: 'https://bond.giving',
       },
       publisher: {
         '@type': 'Organization',
         name: 'Bond',
-        url: 'https://bond.co.jp',
+        url: 'https://bond.giving',
         logo: {
           '@type': 'ImageObject',
-          url: 'https://bond.co.jp/bond-logo.png',
+          url: 'https://bond.giving/bond-logo.png',
         },
       },
       mainEntityOfPage: canonicalUrl,

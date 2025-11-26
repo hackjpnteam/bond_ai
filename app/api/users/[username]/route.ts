@@ -71,7 +71,7 @@ export async function GET(
     achievements.push({
       id: 'member',
       title: 'Bondメンバー',
-      description: 'Bond Launchコミュニティに参加しました',
+      description: 'Bondコミュニティに参加しました',
       earnedDate: user.createdAt,
       badge: '🎯',
       category: 'membership'

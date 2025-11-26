@@ -24,6 +24,8 @@ export default function SettingsPage() {
   
   // Form states for user profile
   const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
+  const [usernameError, setUsernameError] = useState('')
   const [email, setEmail] = useState('')
   const [bio, setBio] = useState('')
   const [company, setCompany] = useState('')
@@ -40,6 +42,7 @@ export default function SettingsPage() {
     if (user) {
       console.log('Settings page user data:', user); // デバッグログ
       setName(user.name || '')
+      setUsername(user.username || '')
       setEmail(user.email || '')
       setCompany(user.company || '')
       // Set position based on role
@@ -64,9 +67,20 @@ export default function SettingsPage() {
       const response = await fetch('/api/profile', {
         credentials: 'include'
       })
-      
+
       if (response.ok) {
         const data = await response.json()
+        // ユーザー情報からusernameを取得
+        if (data.success && data.profile.user) {
+          const userData = data.profile.user
+          if (userData.username) {
+            setUsername(userData.username)
+          }
+          if (userData.name) {
+            setName(userData.name)
+          }
+        }
+        // プロフィール情報を取得
         if (data.success && data.profile.profile) {
           const profile = data.profile.profile
           setBio(profile.bio || '')
@@ -110,7 +124,44 @@ export default function SettingsPage() {
     setSkills(prev => prev.filter(item => item !== value))
   }
 
+  const validateUsername = (value: string) => {
+    if (!value) {
+      setUsernameError('ユーザーIDは必須です')
+      return false
+    }
+    if (value.length < 3) {
+      setUsernameError('3文字以上で入力してください')
+      return false
+    }
+    if (value.length > 30) {
+      setUsernameError('30文字以下で入力してください')
+      return false
+    }
+    if (!/^[a-z0-9_]+$/.test(value)) {
+      setUsernameError('英小文字、数字、アンダースコアのみ使用できます')
+      return false
+    }
+    setUsernameError('')
+    return true
+  }
+
+  const handleUsernameChange = (value: string) => {
+    const normalized = value.toLowerCase().replace(/[^a-z0-9_]/g, '')
+    setUsername(normalized)
+    if (normalized) {
+      validateUsername(normalized)
+    } else {
+      setUsernameError('')
+    }
+  }
+
   const handleSaveProfile = async () => {
+    // usernameのバリデーション
+    if (username && !validateUsername(username)) {
+      toast.error(usernameError || 'ユーザーIDが無効です')
+      return
+    }
+
     setLoading(true)
     try {
       const response = await fetch('/api/profile', {
@@ -120,17 +171,20 @@ export default function SettingsPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
+          name,
+          username,
           bio,
           profileImage,
           interests,
           skills
         })
       })
-      
+
       if (response.ok) {
         toast.success('プロフィール設定を保存しました')
       } else {
-        toast.error('保存に失敗しました')
+        const data = await response.json()
+        toast.error(data.error || '保存に失敗しました')
       }
     } catch (error) {
       console.error('Save profile error:', error)
@@ -238,12 +292,31 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="name">表示名</Label>
-                  <Input 
-                    id="name" 
+                  <Input
+                    id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="表示名を入力"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username">ユーザーID</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">@</span>
+                    <Input
+                      id="username"
+                      value={username}
+                      onChange={(e) => handleUsernameChange(e.target.value)}
+                      placeholder="username"
+                      className={usernameError ? 'border-red-500' : ''}
+                    />
+                  </div>
+                  {usernameError && (
+                    <p className="text-sm text-red-500">{usernameError}</p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    プロフィールURL: bond.giving/users/{username || 'username'}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">メールアドレス</Label>

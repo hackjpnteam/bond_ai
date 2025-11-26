@@ -42,17 +42,54 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
 export const PUT = requireAuth(async (request: NextRequest, user) => {
   try {
     await connectDB();
-    
+
     console.log('Profile update request for user:', {
       id: user.id,
       email: user.email,
       name: user.name
     });
-    
+
     const body = await request.json();
     console.log('Update request body:', body);
-    
-    const { bio, website, linkedin, twitter, location, skills, interests, profileImage } = body;
+
+    const { bio, website, linkedin, twitter, location, skills, interests, profileImage, username, name } = body;
+
+    // username更新の処理
+    if (username !== undefined) {
+      // usernameのバリデーション
+      const usernameRegex = /^[a-z0-9_]{3,30}$/;
+      if (!usernameRegex.test(username)) {
+        return new Response(
+          JSON.stringify({
+            error: 'ユーザーIDは3〜30文字の英小文字、数字、アンダースコアのみ使用できます'
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // 重複チェック
+      const existingUser = await User.findOne({
+        username: username,
+        _id: { $ne: user.id }
+      });
+
+      if (existingUser) {
+        return new Response(
+          JSON.stringify({ error: 'このユーザーIDは既に使用されています' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Userモデルのusernameを更新
+      await User.findByIdAndUpdate(user.id, { username });
+      console.log('Username updated to:', username);
+    }
+
+    // name更新の処理
+    if (name !== undefined && name.trim()) {
+      await User.findByIdAndUpdate(user.id, { name: name.trim() });
+      console.log('Name updated to:', name);
+    }
     
     let userProfile = await UserProfile.findOne({ userId: user.id });
     console.log('Existing user profile found:', !!userProfile);

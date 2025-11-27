@@ -12,14 +12,21 @@ type LayoutProps = {
 
 // APIからユーザー情報を取得
 async function getUserData(userId: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bond.giving'
+  console.log('[Share Layout] Fetching user data for:', userId)
   try {
     const res = await fetch(`${baseUrl}/api/trust-map/share/${userId}`, {
       cache: 'no-store',
     })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
+    if (!res.ok) {
+      console.log('[Share Layout] API returned error:', res.status)
+      return null
+    }
+    const data = await res.json()
+    console.log('[Share Layout] Got user data:', { name: data?.me?.name, companies: data?.companies?.length })
+    return data
+  } catch (error) {
+    console.error('[Share Layout] Fetch error:', error)
     return null
   }
 }

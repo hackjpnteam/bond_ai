@@ -12,20 +12,30 @@ export const contentType = 'image/png'
 
 // MongoDB接続はEdge Runtimeで使えないため、APIから取得
 async function getUserData(userId: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bond.giving'
+  console.log('[OGP Image] Fetching data for userId:', userId, 'from:', `${baseUrl}/api/trust-map/share/${userId}`)
   try {
     const res = await fetch(`${baseUrl}/api/trust-map/share/${userId}`, {
       cache: 'no-store',
     })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
+    if (!res.ok) {
+      console.log('[OGP Image] API returned error:', res.status)
+      return null
+    }
+    const data = await res.json()
+    console.log('[OGP Image] Received data:', { userName: data?.me?.name, companies: data?.companies?.length })
+    return data
+  } catch (error) {
+    console.error('[OGP Image] Fetch error:', error)
     return null
   }
 }
 
-export default async function Image({ params }: { params: { userId: string } }) {
-  const data = await getUserData(params.userId)
+export default async function Image({ params }: { params: Promise<{ userId: string }> }) {
+  // Next.js 15では params が Promise になっている
+  const { userId } = await params
+  console.log('[OGP Image] Generating image for userId:', userId)
+  const data = await getUserData(userId)
 
   const userName = data?.me?.name || 'ユーザー'
   const userImage = data?.me?.imageUrl

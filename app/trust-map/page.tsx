@@ -7,6 +7,7 @@ import { getRelationshipLabel } from '@/lib/relationship';
 interface ApiResponse {
   me: {
     id: string;
+    odlId?: string; // MongoDB ObjectId for sharing
     name: string;
     type: 'person';
     isCenter: boolean;
@@ -225,7 +226,7 @@ export default function TrustMapPage() {
           centerMode="avatar"
           width={1200}
           height={640}
-          identifier={data.me?.id}
+          identifier={data.me?.odlId || data.me?.id}
         />
       </div>
       )}

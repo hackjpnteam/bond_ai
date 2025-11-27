@@ -330,6 +330,7 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
 
   const me = {
     id: username, // usernameを使用
+    odlId: user.id, // MongoDB ObjectIdをシェア用に追加
     name: user.name, // 表示名を追加
     isCenter: true,
     type: "person",

@@ -505,12 +505,13 @@ const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
   ];
 
   return (
-    <div className="relative w-full h-full bg-bond-cream">
+    <div className="relative w-full h-full bg-bond-cream overflow-hidden">
       <svg
         ref={svgRef}
-        width={width}
-        height={height}
-        className="w-full h-full"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+        className="w-full h-full max-w-full"
+        style={{ maxHeight: '100%' }}
       />
       
 

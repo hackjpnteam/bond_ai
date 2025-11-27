@@ -1,7 +1,43 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import ShareableTrustMap from '@/components/trust-map/ShareableTrustMap';
+
+// ウィンドウサイズに応じたグラフサイズを計算するhook
+function useResponsiveSize() {
+  const [size, setSize] = useState({ width: 800, height: 500 });
+
+  const calculateSize = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    // パディングを考慮（左右24pxずつ）
+    const availableWidth = windowWidth - 48;
+    // ヘッダー、タイトル、ボタンエリアを考慮
+    const availableHeight = windowHeight - 250;
+
+    // モバイル: 画面幅に合わせる（最小300px）
+    // デスクトップ: 最大1200px
+    const width = Math.min(Math.max(availableWidth, 300), 1200);
+
+    // 高さは幅に対して約53%の比率を維持（640/1200）
+    // ただしモバイルでは少し縦長に
+    const aspectRatio = windowWidth < 640 ? 0.75 : 0.53;
+    const height = Math.min(Math.max(Math.round(width * aspectRatio), 300), availableHeight);
+
+    setSize({ width, height });
+  }, []);
+
+  useEffect(() => {
+    calculateSize();
+    window.addEventListener('resize', calculateSize);
+    return () => window.removeEventListener('resize', calculateSize);
+  }, [calculateSize]);
+
+  return size;
+}
 
 interface ApiResponse {
   me: {
@@ -32,6 +68,7 @@ interface ApiResponse {
 export default function SharedTrustMapPage() {
   const params = useParams();
   const userId = params.userId as string;
+  const { width, height } = useResponsiveSize();
 
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -121,8 +158,8 @@ export default function SharedTrustMapPage() {
       <ShareableTrustMap
         data={graphData}
         centerMode="avatar"
-        width={1200}
-        height={640}
+        width={width}
+        height={height}
         identifier={userId}
       />
     </div>

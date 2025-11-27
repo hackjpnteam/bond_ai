@@ -5,22 +5,6 @@ import mongoose from "mongoose";
 import Connection from "@/models/Connection";
 import User from "@/models/User";
 import UserProfile from "@/models/UserProfile";
-import { existsSync } from 'fs';
-import { join } from 'path';
-
-// ロゴ画像のパスを取得（存在しない場合はデフォルト画像を返す）
-function getCompanyLogoUrl(companySlug: string): string {
-  const logoPath = `/logos/${companySlug}.png`;
-  const fullPath = join(process.cwd(), 'public', logoPath);
-
-  // サーバーサイドで画像の存在を確認
-  if (existsSync(fullPath)) {
-    return logoPath;
-  }
-
-  // 存在しない場合はデフォルト画像
-  return '/default-company.png';
-}
 
 export const GET = requireAuth(async (request: NextRequest, user) => {
   const meEmail = user.email;
@@ -102,36 +86,39 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
       // 会社情報があれば詳細データを使用、なければ評価データから生成
       const fullCompanyName = company?.name || r.companyName || r._id || "Unknown";
       const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
-      
-      // ロゴファイル名を生成（最新のアップロードファイルを優先）
-      let logoFileName;
-      
-      // 特定の会社の場合は、アップロードされたロゴファイル名を優先
-      if (fullCompanyName.toLowerCase().includes('sopital')) {
-        logoFileName = 'sopital';
-      } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
-        logoFileName = 'hokuto';
-      } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
-        logoFileName = 'chatwork';
-      } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
-        logoFileName = 'hackjpn';
-      } else if (fullCompanyName.toLowerCase().includes('ギグー')) {
-        logoFileName = 'ギグー';
-      } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
-        logoFileName = 'ホーミー';
-      } else if (company?.slug) {
-        // その他の場合は会社データのslugを使用（株式会社を削除）
-        logoFileName = company.slug.replace(/^株式会社/, '');
-      } else {
-        // フォールバック: 会社名から「株式会社」を削除
-        logoFileName = r._id.replace(/^株式会社/, '');
+
+      // ロゴURLを決定（会社データのlogoUrlを優先）
+      let logoUrl = company?.logoUrl || '/default-company.png';
+
+      // logoUrlがない場合のフォールバック
+      if (!company?.logoUrl) {
+        // ロゴファイル名を生成
+        let logoFileName;
+        if (fullCompanyName.toLowerCase().includes('sopital')) {
+          logoFileName = 'sopital';
+        } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
+          logoFileName = 'hokuto';
+        } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
+          logoFileName = 'chatwork';
+        } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
+          logoFileName = 'hackjpn';
+        } else if (fullCompanyName.toLowerCase().includes('ギグー')) {
+          logoFileName = 'ギグー';
+        } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
+          logoFileName = 'ホーミー';
+        } else if (company?.slug) {
+          logoFileName = company.slug.replace(/^株式会社/, '');
+        } else {
+          logoFileName = r._id?.replace(/^株式会社/, '') || displayName;
+        }
+        logoUrl = `/logos/${logoFileName}.png`;
       }
-      
+
       return {
         id: displayName, // 表示用の名前
         fullName: fullCompanyName, // 実データの完全な名前
         type: "org",
-        imageUrl: getCompanyLogoUrl(logoFileName),
+        imageUrl: logoUrl,
         reviewCount: r.reviewCount,
         strength: Math.round(r.strength * 10) / 10,
         relationshipType: r.relationshipType ?? 0, // 関係性タイプを追加
@@ -256,39 +243,45 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
       
       // 接続ユーザーの企業評価を追加
       for (const review of userReviews) {
-        const company = await db.collection("companies").findOne({ 
+        const company = await db.collection("companies").findOne({
           $or: [
             { slug: review._id },
             { name: review.companyName }
           ]
         });
-        
+
         const fullCompanyName = review.companyName;
-        const displayName = fullCompanyName.replace(/^株式会社/, '').trim(); // 現在ユーザーと同じ形式
-        let logoFileName = review._id.replace(/^株式会社/, '');
-        
-        // ギグーの場合のロゴファイル名を統一
-        if (fullCompanyName.toLowerCase().includes('ギグー')) {
-          logoFileName = 'ギグー';
-        } else if (fullCompanyName.toLowerCase().includes('sopital')) {
-          logoFileName = 'sopital';
-        } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
-          logoFileName = 'hokuto';
-        } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
-          logoFileName = 'chatwork';
-        } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
-          logoFileName = 'hackjpn';
-        } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
-          logoFileName = 'ホーミー';
-        } else if (company?.slug) {
-          logoFileName = company.slug.replace(/^株式会社/, '');
+        const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
+
+        // ロゴURLを決定（会社データのlogoUrlを優先）
+        let logoUrl = company?.logoUrl || '/default-company.png';
+
+        // logoUrlがない場合のフォールバック
+        if (!company?.logoUrl) {
+          let logoFileName = review._id?.replace(/^株式会社/, '') || displayName;
+          if (fullCompanyName.toLowerCase().includes('ギグー')) {
+            logoFileName = 'ギグー';
+          } else if (fullCompanyName.toLowerCase().includes('sopital')) {
+            logoFileName = 'sopital';
+          } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
+            logoFileName = 'hokuto';
+          } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
+            logoFileName = 'chatwork';
+          } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
+            logoFileName = 'hackjpn';
+          } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
+            logoFileName = 'ホーミー';
+          } else if (company?.slug) {
+            logoFileName = company.slug.replace(/^株式会社/, '');
+          }
+          logoUrl = `/logos/${logoFileName}.png`;
         }
-        
+
         connectedUsersCompanies.push({
           id: displayName,
           fullName: fullCompanyName,
           type: "org",
-          imageUrl: getCompanyLogoUrl(logoFileName),
+          imageUrl: logoUrl,
           reviewCount: review.reviewCount,
           strength: Math.round(review.strength * 10) / 10,
           relationshipType: review.relationshipType ?? 0,

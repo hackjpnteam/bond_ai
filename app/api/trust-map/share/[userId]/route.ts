@@ -81,28 +81,31 @@ export async function GET(
         const fullCompanyName = company?.name || r.companyName || r._id || "Unknown";
         const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
 
-        // ロゴファイル名を決定（/api/trust-map/route.tsと同様）
-        let logoFileName;
-        if (fullCompanyName.toLowerCase().includes('sopital')) {
-          logoFileName = 'sopital';
-        } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
-          logoFileName = 'hokuto';
-        } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
-          logoFileName = 'chatwork';
-        } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
-          logoFileName = 'hackjpn';
-        } else if (fullCompanyName.toLowerCase().includes('ギグー')) {
-          logoFileName = 'ギグー';
-        } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
-          logoFileName = 'ホーミー';
-        } else if (company?.slug) {
-          logoFileName = company.slug.replace(/^株式会社/, '');
-        } else {
-          logoFileName = r._id?.replace(/^株式会社/, '') || displayName;
-        }
+        // ロゴURLを決定（会社データのlogoUrlを優先）
+        let logoUrl = company?.logoUrl || '/default-company.png';
 
-        // ロゴURLを構築
-        const logoUrl = `/logos/${logoFileName}.png`;
+        // logoUrlがない場合のフォールバック
+        if (!company?.logoUrl) {
+          let logoFileName;
+          if (fullCompanyName.toLowerCase().includes('sopital')) {
+            logoFileName = 'sopital';
+          } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
+            logoFileName = 'hokuto';
+          } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
+            logoFileName = 'chatwork';
+          } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
+            logoFileName = 'hackjpn';
+          } else if (fullCompanyName.toLowerCase().includes('ギグー')) {
+            logoFileName = 'ギグー';
+          } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
+            logoFileName = 'ホーミー';
+          } else if (company?.slug) {
+            logoFileName = company.slug.replace(/^株式会社/, '');
+          } else {
+            logoFileName = r._id?.replace(/^株式会社/, '') || displayName;
+          }
+          logoUrl = `/logos/${logoFileName}.png`;
+        }
 
         return {
           id: displayName,

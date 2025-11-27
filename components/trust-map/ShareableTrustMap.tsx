@@ -1,10 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
-import { Download, Loader2, Share2, Check } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Download, Loader2, Share2, Check, ZoomIn, ZoomOut } from "lucide-react";
 import BondHeartGraph from "@/components/BondHeartGraph";
 import { useTrustMapExport } from "@/hooks/useTrustMapExport";
 import { toPng } from "html-to-image";
+
+// モバイル判定用hook
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
+
+// レスポンシブサイズ計算用hook
+function useResponsiveGraphSize(baseWidth: number, baseHeight: number) {
+  const [size, setSize] = useState({ width: baseWidth, height: baseHeight });
+
+  const calculateSize = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const isMobile = windowWidth < 640;
+
+    if (isMobile) {
+      // モバイル: 画面幅いっぱいに、縦長を活用
+      const graphWidth = windowWidth - 32; // 左右16pxずつのパディング
+      // 正方形に近い比率で、画面の縦を活用
+      const graphHeight = Math.min(graphWidth * 1.2, windowHeight - 300);
+      setSize({ width: graphWidth, height: Math.max(graphHeight, 400) });
+    } else {
+      // デスクトップ: 元のサイズを維持
+      setSize({ width: baseWidth, height: baseHeight });
+    }
+  }, [baseWidth, baseHeight]);
+
+  useEffect(() => {
+    calculateSize();
+    window.addEventListener('resize', calculateSize);
+    return () => window.removeEventListener('resize', calculateSize);
+  }, [calculateSize]);
+
+  return size;
+}
 
 // BondHeartGraph の props 型を再定義（既存コンポーネントを変更せず透過）
 interface Node {
@@ -75,6 +123,23 @@ export default function ShareableTrustMap({
   const [isSharing, setIsSharing] = useState(false);
   const [isXSharing, setIsXSharing] = useState(false);
   const [isFacebookSharing, setIsFacebookSharing] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  const isMobile = useIsMobile();
+  const responsiveSize = useResponsiveGraphSize(width, height);
+
+  // 実際に使用するサイズ（モバイルはレスポンシブ、デスクトップは元のサイズ）
+  const actualWidth = isMobile ? responsiveSize.width : width;
+  const actualHeight = isMobile ? responsiveSize.height : height;
+
+  // ズーム機能
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.25, 2));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+  };
 
   const showExportButton = TRUSTMAP_SHARE_ENABLED && !hideExportButton;
 
@@ -161,25 +226,57 @@ export default function ShareableTrustMap({
 
   return (
     <div className={className}>
+      {/* モバイル用ズームボタン */}
+      {isMobile && (
+        <div className="flex items-center justify-end gap-2 mb-2">
+          <span className="text-xs text-gray-500">{Math.round(zoomLevel * 100)}%</span>
+          <button
+            onClick={handleZoomOut}
+            disabled={zoomLevel <= 0.5}
+            className="p-2 rounded-lg bg-white border border-gray-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="縮小"
+          >
+            <ZoomOut className="h-5 w-5 text-gray-600" />
+          </button>
+          <button
+            onClick={handleZoomIn}
+            disabled={zoomLevel >= 2}
+            className="p-2 rounded-lg bg-white border border-gray-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="拡大"
+          >
+            <ZoomIn className="h-5 w-5 text-gray-600" />
+          </button>
+        </div>
+      )}
+
       {/* 画像化対象のコンテナ */}
       <div
-        ref={ref}
-        className="relative w-full"
+        className={`relative ${isMobile ? 'overflow-auto' : ''}`}
         style={{
           backgroundColor: "#FFFAF5",
-          maxWidth: width,
-          aspectRatio: `${width} / ${height}`,
+          maxHeight: isMobile ? `${actualHeight}px` : undefined,
         }}
       >
-        <BondHeartGraph
-          data={data}
-          width={width}
-          height={height}
-          centerMode={centerMode}
-        />
-        {/* 画像に含めるウォーターマーク（オプション） */}
-        <div className="absolute bottom-2 right-2 text-xs text-gray-400 opacity-60 pointer-events-none">
-          Powered by Bond
+        <div
+          ref={ref}
+          className="relative"
+          style={{
+            backgroundColor: "#FFFAF5",
+            width: isMobile ? actualWidth * zoomLevel : actualWidth,
+            height: isMobile ? actualHeight * zoomLevel : actualHeight,
+            transformOrigin: 'top left',
+          }}
+        >
+          <BondHeartGraph
+            data={data}
+            width={actualWidth * zoomLevel}
+            height={actualHeight * zoomLevel}
+            centerMode={centerMode}
+          />
+          {/* 画像に含めるウォーターマーク（オプション） */}
+          <div className="absolute bottom-2 right-2 text-xs text-gray-400 opacity-60 pointer-events-none">
+            Powered by Bond
+          </div>
         </div>
       </div>
 

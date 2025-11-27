@@ -10,7 +10,7 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
 
     const { id } = await params;
     const body = await request.json();
-    const { rating, comment, categories, reason, relationshipType } = body;
+    const { rating, comment, categories, reason, relationshipType, isAnonymous } = body;
 
     // relationshipTypeのバリデーション (0-6)
     if (relationshipType !== undefined) {
@@ -49,7 +49,7 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
 
     evaluation.editHistory.push({
       previousRating: evaluation.rating,
-      previousComment: evaluation.comment,
+      previousComment: evaluation.comment || '',
       editedAt: new Date(),
       reason: reason || ''
     });
@@ -67,6 +67,9 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
     if (relationshipType !== undefined) {
       evaluation.relationshipType = Number(relationshipType);
     }
+    if (typeof isAnonymous === 'boolean') {
+      evaluation.isAnonymous = isAnonymous;
+    }
 
     await evaluation.save();
 
@@ -80,6 +83,7 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
           comment: evaluation.comment,
           categories: evaluation.categories,
           relationshipType: evaluation.relationshipType,
+          isAnonymous: evaluation.isAnonymous,
           editHistory: evaluation.editHistory,
           updatedAt: evaluation.updatedAt
         }

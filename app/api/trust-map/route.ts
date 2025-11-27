@@ -69,7 +69,8 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
         _id: "$companySlug",
         companyName: { $first: "$companyName" },
         reviewCount: { $sum: 1 },
-        strength: { $avg: "$rating" }
+        strength: { $avg: "$rating" },
+        relationshipType: { $first: "$relationshipType" }
       }
     }
   ]).toArray();
@@ -133,7 +134,9 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
         imageUrl: getCompanyLogoUrl(logoFileName),
         reviewCount: r.reviewCount,
         strength: Math.round(r.strength * 10) / 10,
+        relationshipType: r.relationshipType ?? 0, // 関係性タイプを追加
         reviewedBy: username, // 評価者をusernameで追加
+        reviewedByName: user.name, // 評価者の表示名を追加
         // 会社概要データを追加
         industry: company?.industry || "未分類",
         description: company?.description || `${fullCompanyName}の評価情報`,
@@ -205,6 +208,7 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
 
       connectedUsers.push({
         id: connectedUsername, // usernameを使用
+        name: otherUser.name, // 表示名を追加
         type: "person",
         imageUrl: userImage || '/default-avatar.png',
         company: otherUser.company,
@@ -230,19 +234,20 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
       console.log(`Searching evaluations for connected user ${connUser.id} with IDs:`, connUserPossibleIds.map(id => id.toString()));
 
       const userReviews = await db.collection("evaluations").aggregate([
-        { 
-          $match: { 
-            userId: { 
+        {
+          $match: {
+            userId: {
               $in: connUserPossibleIds
-            } 
-          } 
+            }
+          }
         },
         {
           $group: {
             _id: "$companySlug",
             companyName: { $first: "$companyName" },
             reviewCount: { $sum: 1 },
-            strength: { $avg: "$rating" }
+            strength: { $avg: "$rating" },
+            relationshipType: { $first: "$relationshipType" }
           }
         }
       ]).toArray();
@@ -286,7 +291,9 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
           imageUrl: getCompanyLogoUrl(logoFileName),
           reviewCount: review.reviewCount,
           strength: Math.round(review.strength * 10) / 10,
-          reviewedBy: connUser.id
+          relationshipType: review.relationshipType ?? 0,
+          reviewedBy: connUser.id,
+          reviewedByName: connUser.name
         });
       }
     }
@@ -323,6 +330,7 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
 
   const me = {
     id: username, // usernameを使用
+    name: user.name, // 表示名を追加
     isCenter: true,
     type: "person",
     imageUrl: userProfileImage,

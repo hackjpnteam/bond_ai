@@ -43,7 +43,7 @@ export async function validateSession(request: NextRequest): Promise<Authenticat
         const user = await User.findOne({ email: token.email });
 
         if (user) {
-          console.log('✅ [validateSession] User found in DB:', user.email);
+          console.log('✅ [validateSession] User found in DB:', user.email, 'username:', user.username);
 
           // UserProfileから画像を取得
           let profileImage = user.image || token.picture;
@@ -143,7 +143,7 @@ export async function validateSession(request: NextRequest): Promise<Authenticat
       id: user._id.toString(),
       email: user.email,
       name: user.name,
-      username: user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
+      username: user.username || user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
       role: user.role,
       company: user.company,
       image: profileImage,

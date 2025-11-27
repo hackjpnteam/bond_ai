@@ -6,7 +6,7 @@ export interface IEvaluation extends Document {
   companySlug: string;
   rating: number;
   relationshipType: number; // 0-6: 0=未設定, 1=知人, 2=取引先, 3=協業先, 4=投資先, 5=株主, 6=友達
-  comment: string;
+  comment?: string;
   categories: {
     culture: number;
     growth: number;
@@ -16,7 +16,7 @@ export interface IEvaluation extends Document {
   };
   editHistory?: Array<{
     previousRating: number;
-    previousComment: string;
+    previousComment?: string;
     editedAt: Date;
     reason?: string;
   }>;
@@ -60,7 +60,7 @@ const EvaluationSchema: Schema<IEvaluation> = new Schema({
   },
   comment: {
     type: String,
-    required: true,
+    default: '',
     maxlength: 2000
   },
   categories: {
@@ -72,7 +72,7 @@ const EvaluationSchema: Schema<IEvaluation> = new Schema({
   },
   editHistory: [{
     previousRating: { type: Number, required: true },
-    previousComment: { type: String, required: true },
+    previousComment: { type: String, default: '' },
     editedAt: { type: Date, default: Date.now },
     reason: { type: String, maxlength: 500 }
   }],
@@ -92,6 +92,11 @@ const EvaluationSchema: Schema<IEvaluation> = new Schema({
 EvaluationSchema.index({ userId: 1, companySlug: 1 });
 EvaluationSchema.index({ companySlug: 1, createdAt: -1 });
 EvaluationSchema.index({ userId: 1, createdAt: -1 });
+
+// Delete cached model in development to apply schema changes
+if (process.env.NODE_ENV !== 'production' && mongoose.models.Evaluation) {
+  delete mongoose.models.Evaluation;
+}
 
 const Evaluation: Model<IEvaluation> = mongoose.models.Evaluation || mongoose.model<IEvaluation>('Evaluation', EvaluationSchema);
 

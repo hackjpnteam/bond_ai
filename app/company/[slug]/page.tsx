@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, Building2, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check } from 'lucide-react';
+import { Star, Building2, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { getUserDisplayName } from '@/lib/user-display';
 import { getRelationshipLabel, RELATIONSHIP_OPTIONS, RELATIONSHIP_TYPES } from '@/lib/relationship';
 import { CompanyOverview } from '@/components/company/CompanyOverview';
+import EditEvaluationModal from '@/components/EditEvaluationModal';
 import ReactMarkdown from 'react-markdown';
 
 interface Evaluation {
@@ -108,6 +109,8 @@ export default function CompanyPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const LEGACY_RELATIONSHIP_MAP: Record<string, number> = {
     shareholder: RELATIONSHIP_TYPES.INVESTOR,
@@ -937,6 +940,44 @@ export default function CompanyPage() {
     setIsSaved(!isSaved);
   };
 
+  // 評価編集ハンドラ
+  const handleEditEvaluation = (evaluation: Evaluation) => {
+    setEditingEvaluation({
+      ...evaluation,
+      companyName: companyData?.name || companyName,
+      companySlug: companyName.toLowerCase()
+    } as any);
+    setIsEditModalOpen(true);
+  };
+
+  // 評価保存ハンドラ
+  const handleSaveEvaluation = (updatedEvaluation: any) => {
+    if (!companyData) return;
+
+    // ローカル状態を更新
+    const updatedEvaluations = companyData.evaluations.map(evaluation =>
+      evaluation.id === updatedEvaluation.id
+        ? {
+            ...evaluation,
+            rating: updatedEvaluation.rating,
+            comment: updatedEvaluation.comment,
+            relationshipType: updatedEvaluation.relationshipType,
+            relationshipLabel: getRelationshipLabel(updatedEvaluation.relationshipType),
+            isAnonymous: updatedEvaluation.isAnonymous
+          }
+        : evaluation
+    );
+
+    // 平均評価を再計算
+    const averageRating = updatedEvaluations.reduce((sum, evaluation) => sum + evaluation.rating, 0) / updatedEvaluations.length;
+
+    setCompanyData({
+      ...companyData,
+      evaluations: updatedEvaluations,
+      averageRating
+    });
+  };
+
   // レポートをクリップボードにコピー
   const handleCopyReport = async () => {
     if (!companyData) return;
@@ -1514,6 +1555,16 @@ URL: ${window.location.href}`;
                                 <p className="text-gray-700 leading-relaxed">
                                   "{evaluation.comment}"
                                 </p>
+                                {/* 自分の評価の場合は編集ボタンを表示 */}
+                                {currentUser?.id === evaluation.userId && (
+                                  <button
+                                    onClick={() => handleEditEvaluation(evaluation)}
+                                    className="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                    編集
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1725,6 +1776,17 @@ URL: ${window.location.href}`;
             </div>
           </div>
         </div>
+
+        {/* 評価編集モーダル */}
+        <EditEvaluationModal
+          evaluation={editingEvaluation as any}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingEvaluation(null);
+          }}
+          onSave={handleSaveEvaluation}
+        />
       </div>
   );
 }

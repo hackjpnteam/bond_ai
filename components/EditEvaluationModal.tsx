@@ -17,13 +17,7 @@ interface Evaluation {
   relationshipType: number
   relationshipLabel?: string
   comment?: string
-  categories?: {
-    culture: number
-    growth: number
-    workLifeBalance: number
-    compensation: number
-    leadership: number
-  }
+  isAnonymous?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -45,14 +39,6 @@ const RELATIONSHIP_OPTIONS = [
   { value: 6, label: '友達' },
 ]
 
-const CATEGORY_LABELS = {
-  culture: '企業文化',
-  growth: '成長性',
-  workLifeBalance: 'ワークライフバランス',
-  compensation: '報酬',
-  leadership: 'リーダーシップ',
-}
-
 export default function EditEvaluationModal({
   evaluation,
   isOpen,
@@ -62,13 +48,7 @@ export default function EditEvaluationModal({
   const [rating, setRating] = useState(evaluation?.rating || 3)
   const [comment, setComment] = useState(evaluation?.comment || '')
   const [relationshipType, setRelationshipType] = useState(evaluation?.relationshipType || 0)
-  const [categories, setCategories] = useState(evaluation?.categories || {
-    culture: 3,
-    growth: 3,
-    workLifeBalance: 3,
-    compensation: 3,
-    leadership: 3,
-  })
+  const [isAnonymous, setIsAnonymous] = useState(evaluation?.isAnonymous || false)
   const [saving, setSaving] = useState(false)
   const [editReason, setEditReason] = useState('')
 
@@ -78,13 +58,7 @@ export default function EditEvaluationModal({
       setRating(evaluation.rating)
       setComment(evaluation.comment || '')
       setRelationshipType(evaluation.relationshipType)
-      setCategories(evaluation.categories || {
-        culture: 3,
-        growth: 3,
-        workLifeBalance: 3,
-        compensation: 3,
-        leadership: 3,
-      })
+      setIsAnonymous(evaluation.isAnonymous || false)
       setEditReason('')
     }
   }
@@ -112,7 +86,7 @@ export default function EditEvaluationModal({
           rating,
           comment,
           relationshipType,
-          categories,
+          isAnonymous,
           reason: editReason,
         }),
       })
@@ -131,7 +105,7 @@ export default function EditEvaluationModal({
         comment,
         relationshipType,
         relationshipLabel: getRelationshipLabel(relationshipType),
-        categories,
+        isAnonymous,
         updatedAt: new Date().toISOString(),
       })
       onClose()
@@ -143,8 +117,7 @@ export default function EditEvaluationModal({
     }
   }
 
-  const renderStars = (value: number, onChange: (v: number) => void, size: 'sm' | 'lg' = 'lg') => {
-    const starSize = size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'
+  const renderStars = (value: number, onChange: (v: number) => void) => {
     return (
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
@@ -155,7 +128,7 @@ export default function EditEvaluationModal({
             className="focus:outline-none transition-transform hover:scale-110"
           >
             <Star
-              className={`${starSize} ${
+              className={`w-8 h-8 ${
                 star <= value
                   ? 'text-yellow-500 fill-yellow-500'
                   : 'text-gray-300'
@@ -214,25 +187,6 @@ export default function EditEvaluationModal({
             </div>
           </div>
 
-          {/* Category Ratings */}
-          <div>
-            <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-              カテゴリー別評価
-            </Label>
-            <div className="space-y-3">
-              {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{label}</span>
-                  {renderStars(
-                    categories[key as keyof typeof categories],
-                    (v) => setCategories({ ...categories, [key]: v }),
-                    'sm'
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Comment */}
           <div>
             <Label className="text-sm font-semibold text-gray-700 mb-2 block">
@@ -245,6 +199,43 @@ export default function EditEvaluationModal({
               rows={4}
               className="resize-none"
             />
+          </div>
+
+          {/* Anonymous Toggle */}
+          <div>
+            <Label className="text-sm font-semibold text-gray-700 mb-2 block">
+              表示設定
+            </Label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsAnonymous(false)}
+                className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+                  !isAnonymous
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-semibold mb-1">実名で投稿</div>
+                <div className="text-xs opacity-80">
+                  プロフィール名が表示されます
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAnonymous(true)}
+                className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+                  isAnonymous
+                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-semibold mb-1">匿名で投稿</div>
+                <div className="text-xs opacity-80">
+                  名前が「匿名ユーザー」として表示されます
+                </div>
+              </button>
+            </div>
           </div>
 
           {/* Edit Reason (optional) */}

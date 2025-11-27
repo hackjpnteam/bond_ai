@@ -76,6 +76,7 @@ interface UserProfile {
       compensation: number
       leadership: number
     }
+    isAnonymous?: boolean
     createdAt?: string
     updatedAt?: string
   }[]

@@ -5,6 +5,7 @@ import * as d3 from 'd3';
 
 interface Node {
   id: string;
+  displayName?: string;
   reviewCount: number;
   isCenter?: boolean;
   type: 'person' | 'org';
@@ -308,7 +309,7 @@ const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
           show: true,
           x: event.pageX + 10,
           y: event.pageY - 10,
-          content: `${d.id} (${d.reviewCount} reviews)${clickHint}`
+          content: `${d.displayName || d.id} (${d.reviewCount} reviews)${clickHint}`
         });
       })
       .on('mouseout', () => {
@@ -377,7 +378,7 @@ const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
                 .style('color', 'white')
                 .style('font-size', `${radius * 0.6}px`)
                 .style('font-weight', 'bold')
-                .text(d.id.charAt(0).toUpperCase());
+                .text((d.displayName || d.id).charAt(0).toUpperCase());
             });
         } else {
           // 中心ノード: Bondロゴを円形に表示（デフォルト）
@@ -438,7 +439,7 @@ const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
               .style('color', 'white')
               .style('font-size', `${radius * 0.6}px`)
               .style('font-weight', 'bold')
-              .text(d.id.charAt(0).toUpperCase());
+              .text((d.displayName || d.id).charAt(0).toUpperCase());
           });
       } else {
         // 画像がないノード: 色付き円
@@ -456,7 +457,7 @@ const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
       .data(data.nodes)
       .enter()
       .append('text')
-      .text((d: Node) => d.id)
+      .text((d: Node) => d.displayName || d.id)
       .attr('text-anchor', 'middle')
       .attr('dy', (d: Node) => Math.round((22.5 * sizeScale(d) + 30) * 10) / 10)
       .attr('font-size', '12px')

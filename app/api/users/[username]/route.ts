@@ -57,6 +57,7 @@ export async function GET(
         relationshipLabel: getRelationshipLabel(relationshipType),
         relationshipSource: 'evaluation',
         categories: evaluation.categories,
+        isAnonymous: evaluation.isAnonymous || false,
         createdAt: evaluation.createdAt,
         updatedAt: evaluation.updatedAt
       };

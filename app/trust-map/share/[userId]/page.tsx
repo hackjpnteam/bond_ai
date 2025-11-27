@@ -22,6 +22,7 @@ interface ApiResponse {
   }>;
   users?: Array<{
     id: string;
+    name: string;
     type: 'person';
     imageUrl: string;
     strength: number;
@@ -54,10 +55,26 @@ export default function SharedTrustMapPage() {
   const graphData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
 
+    // 各ノードにdisplayNameを設定
+    const meNode = {
+      ...data.me,
+      displayName: data.me.name,
+    };
+
+    const companyNodes = data.companies.map(c => ({
+      ...c,
+      displayName: c.id, // idは既に表示用の短い名前
+    }));
+
+    const userNodes = (data.users || []).map(u => ({
+      ...u,
+      displayName: u.name,
+    }));
+
     const nodes = [
-      data.me,
-      ...data.companies,
-      ...(data.users || [])
+      meNode,
+      ...companyNodes,
+      ...userNodes,
     ];
 
     const links = [

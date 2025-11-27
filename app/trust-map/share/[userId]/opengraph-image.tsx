@@ -31,6 +31,17 @@ async function getUserData(userId: string) {
   }
 }
 
+// 画像URLを絶対URLに変換
+function getAbsoluteImageUrl(imageUrl: string | undefined): string | null {
+  if (!imageUrl) return null
+  if (imageUrl.includes('default')) return null
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bond.giving'
+  if (imageUrl.startsWith('/')) {
+    return `${baseUrl}${imageUrl}`
+  }
+  return imageUrl
+}
+
 export default async function Image({ params }: { params: Promise<{ userId: string }> }) {
   // Next.js 15では params が Promise になっている
   const { userId } = await params
@@ -44,39 +55,47 @@ export default async function Image({ params }: { params: Promise<{ userId: stri
   const companyCount = companies.length
   const connectionCount = users.length
 
-  // ネットワークノードの位置を計算（企業とユーザーを別々に配置）
-  const companyNodes: any[] = []
-  const userNodes: any[] = []
-  const maxCompanies = Math.min(companyCount, 6)
-  const maxUsers = Math.min(connectionCount, 4)
+  // 中心座標
+  const centerX = 600
+  const centerY = 315
 
-  // 企業ノード（上半分に配置）
+  // ネットワークノードの位置を計算（全ノードを円周上に均等配置）
+  const allNodes: any[] = []
+  const totalNodes = Math.min(companyCount, 8) + Math.min(connectionCount, 4)
+  const radius = 180
+
+  // 企業ノード（最大8個）
+  const maxCompanies = Math.min(companyCount, 8)
   for (let i = 0; i < maxCompanies; i++) {
-    const angle = (i / maxCompanies) * Math.PI - Math.PI / 2
-    const radius = 170
-    companyNodes.push({
-      x: 600 + Math.cos(angle) * radius,
-      y: 300 + Math.sin(angle) * radius * 0.8,
-      company: companies[i],
+    const angle = (i / totalNodes) * 2 * Math.PI - Math.PI / 2
+    allNodes.push({
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius * 0.7,
+      type: 'company',
+      data: companies[i],
     })
   }
 
-  // ユーザーノード（下半分に配置）
+  // ユーザーノード（最大4個）
+  const maxUsers = Math.min(connectionCount, 4)
   for (let i = 0; i < maxUsers; i++) {
-    const angle = (i / maxUsers) * Math.PI + Math.PI / 2
-    const radius = 150
-    userNodes.push({
-      x: 600 + Math.cos(angle) * radius,
-      y: 300 + Math.sin(angle) * radius * 0.6,
-      user: users[i],
+    const angle = ((maxCompanies + i) / totalNodes) * 2 * Math.PI - Math.PI / 2
+    allNodes.push({
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius * 0.7,
+      type: 'user',
+      data: users[i],
     })
   }
+
+  // 中央ユーザーの画像URL
+  const centerUserImageUrl = getAbsoluteImageUrl(userImage)
 
   return new ImageResponse(
     (
       <div
         style={{
-          background: 'linear-gradient(135deg, #FFFAF5 0%, #FFF5EB 50%, #FFFAF5 100%)',
+          background: 'linear-gradient(135deg, #FFF5F8 0%, #FFFAF5 50%, #FFF5F8 100%)',
           width: '100%',
           height: '100%',
           display: 'flex',
@@ -93,141 +112,184 @@ export default async function Image({ params }: { params: Promise<{ userId: stri
           height="630"
           style={{ position: 'absolute', top: 0, left: 0 }}
         >
-          {/* 企業への線 */}
-          {companyNodes.map((node, i) => (
+          {allNodes.map((node, i) => (
             <line
-              key={`company-${i}`}
-              x1="600"
-              y1="300"
+              key={`line-${i}`}
+              x1={centerX}
+              y1={centerY}
               x2={node.x}
               y2={node.y}
-              stroke="#3B82F6"
-              strokeWidth="2"
-              strokeOpacity="0.4"
-            />
-          ))}
-          {/* ユーザーへの線 */}
-          {userNodes.map((node, i) => (
-            <line
-              key={`user-${i}`}
-              x1="600"
-              y1="300"
-              x2={node.x}
-              y2={node.y}
-              stroke="#8B5CF6"
-              strokeWidth="2"
-              strokeOpacity="0.4"
+              stroke={node.type === 'company' ? '#FF5E9E' : '#FF5E9E'}
+              strokeWidth="3"
+              strokeOpacity="0.5"
             />
           ))}
         </svg>
 
-        {/* 企業ノード */}
-        {companyNodes.map((node, i) => (
-          <div
-            key={`company-${i}`}
-            style={{
-              position: 'absolute',
-              left: node.x - 30,
-              top: node.y - 30,
-              width: 60,
-              height: 60,
-              borderRadius: '50%',
-              background: '#fff',
-              border: '3px solid #3B82F6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 10px rgba(59,130,246,0.2)',
-              overflow: 'hidden',
-            }}
-          >
-            {node.company?.imageUrl && !node.company.imageUrl.includes('default') ? (
-              <img
-                src={node.company.imageUrl.startsWith('/')
-                  ? `${process.env.NEXT_PUBLIC_BASE_URL || 'https://bond.giving'}${node.company.imageUrl}`
-                  : node.company.imageUrl}
-                width={50}
-                height={50}
-                style={{ objectFit: 'cover' }}
-              />
-            ) : (
-              <span style={{ color: '#3B82F6', fontSize: 24 }}>🏢</span>
-            )}
-          </div>
-        ))}
+        {/* ノードを描画 */}
+        {allNodes.map((node, i) => {
+          const isCompany = node.type === 'company'
+          const nodeSize = isCompany ? 70 : 60
+          const imageUrl = getAbsoluteImageUrl(node.data?.imageUrl)
 
-        {/* ユーザーノード */}
-        {userNodes.map((node, i) => (
-          <div
-            key={`user-${i}`}
-            style={{
-              position: 'absolute',
-              left: node.x - 25,
-              top: node.y - 25,
-              width: 50,
-              height: 50,
-              borderRadius: '50%',
-              background: '#fff',
-              border: '3px solid #8B5CF6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 10px rgba(139,92,246,0.2)',
-              overflow: 'hidden',
-            }}
-          >
-            {node.user?.imageUrl && !node.user.imageUrl.includes('default') ? (
-              <img
-                src={node.user.imageUrl.startsWith('/')
-                  ? `${process.env.NEXT_PUBLIC_BASE_URL || 'https://bond.giving'}${node.user.imageUrl}`
-                  : node.user.imageUrl}
-                width={44}
-                height={44}
-                style={{ objectFit: 'cover', borderRadius: '50%' }}
-              />
-            ) : (
-              <span style={{ color: '#8B5CF6', fontSize: 20 }}>👤</span>
-            )}
-          </div>
-        ))}
+          return (
+            <div
+              key={`node-${i}`}
+              style={{
+                position: 'absolute',
+                left: node.x - nodeSize / 2,
+                top: node.y - nodeSize / 2,
+                width: nodeSize,
+                height: nodeSize,
+                borderRadius: '50%',
+                background: '#fff',
+                border: isCompany ? '3px solid #3B82F6' : '3px solid #8B5CF6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                overflow: 'hidden',
+              }}
+            >
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  width={nodeSize - 6}
+                  height={nodeSize - 6}
+                  style={{ objectFit: 'cover', borderRadius: '50%' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: nodeSize - 6,
+                    height: nodeSize - 6,
+                    borderRadius: '50%',
+                    background: isCompany ? '#EBF5FF' : '#F3E8FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: isCompany ? 28 : 24,
+                  }}
+                >
+                  {isCompany ? '🏢' : '❤️'}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {/* ノードラベル */}
+        {allNodes.map((node, i) => {
+          const isCompany = node.type === 'company'
+          const nodeSize = isCompany ? 70 : 60
+          const label = isCompany
+            ? (node.data?.id || node.data?.fullName || '').substring(0, 8)
+            : (node.data?.name || '').substring(0, 6)
+
+          return (
+            <div
+              key={`label-${i}`}
+              style={{
+                position: 'absolute',
+                left: node.x - 50,
+                top: node.y + nodeSize / 2 + 4,
+                width: 100,
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  color: '#333',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  background: 'rgba(255,255,255,0.9)',
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                }}
+              >
+                {label}
+              </span>
+            </div>
+          )
+        })}
 
         {/* 中央のユーザーアイコン */}
         <div
           style={{
             position: 'absolute',
-            left: 600 - 55,
-            top: 300 - 55,
-            width: 110,
-            height: 110,
+            left: centerX - 60,
+            top: centerY - 60,
+            width: 120,
+            height: 120,
             borderRadius: '50%',
             background: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 20px rgba(255,94,158,0.3)',
+            boxShadow: '0 6px 24px rgba(255,94,158,0.4)',
             border: '4px solid #FF5E9E',
             overflow: 'hidden',
           }}
         >
-          {userImage && !userImage.includes('default') ? (
+          {centerUserImageUrl ? (
             <img
-              src={userImage.startsWith('/')
-                ? `${process.env.NEXT_PUBLIC_BASE_URL || 'https://bond.giving'}${userImage}`
-                : userImage}
-              width={100}
-              height={100}
+              src={centerUserImageUrl}
+              width={110}
+              height={110}
               style={{ objectFit: 'cover', borderRadius: '50%' }}
             />
           ) : (
-            <span style={{ color: '#FF5E9E', fontSize: 50 }}>👤</span>
+            <div
+              style={{
+                width: 110,
+                height: 110,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #FF5E9E 0%, #FF8AB5 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 48,
+                color: '#fff',
+              }}
+            >
+              👤
+            </div>
           )}
+        </div>
+
+        {/* 中央ユーザー名 */}
+        <div
+          style={{
+            position: 'absolute',
+            left: centerX - 80,
+            top: centerY + 68,
+            width: 160,
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 14,
+              color: '#333',
+              fontWeight: 700,
+              background: 'rgba(255,255,255,0.95)',
+              padding: '4px 12px',
+              borderRadius: 8,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            }}
+          >
+            {userName}
+          </span>
         </div>
 
         {/* タイトル（上部） */}
         <div
           style={{
             position: 'absolute',
-            top: 35,
+            top: 30,
             left: 0,
             right: 0,
             width: '100%',
@@ -239,7 +301,7 @@ export default async function Image({ params }: { params: Promise<{ userId: stri
         >
           <h1
             style={{
-              fontSize: 44,
+              fontSize: 42,
               fontWeight: 'bold',
               color: '#333',
               margin: 0,
@@ -254,26 +316,26 @@ export default async function Image({ params }: { params: Promise<{ userId: stri
         <div
           style={{
             position: 'absolute',
-            bottom: 55,
+            bottom: 50,
             left: 0,
             right: 0,
             width: '100%',
             display: 'flex',
             justifyContent: 'center',
-            gap: 80,
+            gap: 100,
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: 40, fontWeight: 'bold', color: '#3B82F6' }}>
+            <span style={{ fontSize: 44, fontWeight: 'bold', color: '#3B82F6' }}>
               {companyCount}
             </span>
-            <span style={{ fontSize: 16, color: '#666' }}>評価企業</span>
+            <span style={{ fontSize: 16, color: '#666', fontWeight: 500 }}>評価企業</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: 40, fontWeight: 'bold', color: '#8B5CF6' }}>
+            <span style={{ fontSize: 44, fontWeight: 'bold', color: '#8B5CF6' }}>
               {connectionCount}
             </span>
-            <span style={{ fontSize: 16, color: '#666' }}>つながり</span>
+            <span style={{ fontSize: 16, color: '#666', fontWeight: 500 }}>つながり</span>
           </div>
         </div>
 
@@ -281,15 +343,15 @@ export default async function Image({ params }: { params: Promise<{ userId: stri
         <div
           style={{
             position: 'absolute',
-            bottom: 18,
-            right: 30,
+            bottom: 16,
+            right: 24,
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 6,
           }}
         >
-          <span style={{ fontSize: 14, color: '#999' }}>Powered by</span>
-          <span style={{ fontSize: 18, fontWeight: 'bold', color: '#FF5E9E' }}>Bond</span>
+          <span style={{ fontSize: 13, color: '#999' }}>Powered by</span>
+          <span style={{ fontSize: 20, fontWeight: 'bold', color: '#FF5E9E' }}>Bond</span>
         </div>
       </div>
     ),

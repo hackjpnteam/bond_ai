@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import UserProfile from '@/models/UserProfile';
 import Evaluation from '@/models/Evaluation';
 import { getRelationshipLabel } from '@/lib/relationship';
 
@@ -34,6 +35,9 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // UserProfileも取得（interests, skillsなどの詳細情報）
+    const userProfile = await UserProfile.findOne({ userId: user._id.toString() }).lean();
 
     // ユーザーの評価を取得
     const evaluations = await Evaluation.find({
@@ -270,6 +274,16 @@ export async function GET(
       ? evaluations.reduce((sum, e) => sum + e.rating, 0)
       : 0;
 
+    // UserProfileのデータを優先して使用（UserProfileがない場合はUserモデルのデータを使用）
+    const interests = (userProfile as any)?.interests?.length > 0
+      ? (userProfile as any).interests
+      : (user.interests || []);
+    const skills = (userProfile as any)?.skills?.length > 0
+      ? (userProfile as any).skills
+      : (user.skills || []);
+    const bio = (userProfile as any)?.bio || user.bio;
+    const profileImage = (userProfile as any)?.profileImage || user.image;
+
     // ユーザー情報を返す
     return NextResponse.json({
       success: true,
@@ -279,11 +293,12 @@ export async function GET(
         name: user.name,
         email: user.email,
         image: user.image,
+        profileImage: profileImage,
         company: user.company,
         role: user.role,
-        bio: user.bio,
-        interests: user.interests || [],
-        skills: user.skills || [],
+        bio: bio,
+        interests: interests,
+        skills: skills,
         createdAt: user.createdAt,
         trustScore: trustScore,
         connectionCount: connectionCount,

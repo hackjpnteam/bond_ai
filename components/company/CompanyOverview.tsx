@@ -111,13 +111,13 @@ export function CompanyOverview({
           </p>
           <div className="flex justify-center gap-3">
             <Link href="/login">
-              <Button className="bg-bond-pink hover:bg-bond-pinkDark text-white">
+              <Button className="bg-bond-pink hover:bg-bond-pinkDark text-white shadow-md">
                 <LogIn className="w-4 h-4 mr-2" />
                 ログイン
               </Button>
             </Link>
             <Link href="/signup">
-              <Button variant="outline" className="border-bond-pink text-bond-pink hover:bg-bond-pink hover:text-white">
+              <Button variant="outline" className="border-2 border-bond-pink text-bond-pink hover:bg-bond-pink hover:text-white bg-white shadow-md">
                 新規登録
               </Button>
             </Link>
@@ -135,7 +135,7 @@ export function CompanyOverview({
             variant="outline"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="border-bond-pink text-bond-pink hover:bg-bond-pink hover:text-white transition-colors"
+            className="border-2 border-bond-pink text-bond-pink hover:bg-bond-pink hover:text-white transition-colors bg-white shadow-sm"
           >
             {isExpanded ? (
               <>

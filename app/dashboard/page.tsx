@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   User, Star, TrendingUp, Building2, Settings, Bell,
   Activity, BarChart3, Users, MessageCircle, Award,
-  PlusCircle, ExternalLink, Calendar
+  PlusCircle, ExternalLink, Calendar, Shield
 } from 'lucide-react'
 import Link from 'next/link'
 import { Rating } from '@/components/Rating'
@@ -244,6 +244,14 @@ export default function DashboardPage() {
               <p className="text-sm text-ash-muted hidden md:block">あなたのアクティビティと評価</p>
             </div>
             <div className="flex items-center gap-2">
+              {user?.isAdmin && (
+                <Link href="/admin">
+                  <Button variant="ghost" size="sm" className="text-primary">
+                    <Shield className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">管理者</span>
+                  </Button>
+                </Link>
+              )}
               <Link href="/notifications">
                 <Button variant="ghost" size="sm">
                   <Bell className="w-4 h-4" />

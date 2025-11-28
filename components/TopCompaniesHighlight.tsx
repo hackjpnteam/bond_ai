@@ -80,10 +80,10 @@ export function TopCompaniesHighlight() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
         {[...Array(3)].map((_, index) => (
-          <div key={index} className="card p-6 border-2 border-dashed border-ash-line animate-pulse">
-            <div className="h-6 bg-ash-surface rounded mb-4"></div>
+          <div key={index} className="card p-4 md:p-6 border-2 border-dashed border-ash-line animate-pulse">
+            <div className="h-5 md:h-6 bg-ash-surface rounded mb-3 md:mb-4"></div>
             <div className="h-4 bg-ash-surface rounded mb-2 w-1/2"></div>
             <div className="h-4 bg-ash-surface rounded w-1/3"></div>
           </div>
@@ -94,14 +94,14 @@ export function TopCompaniesHighlight() {
 
   if (error || companies.length === 0) {
     return (
-      <div className="card p-6 text-center mb-8">
-        <p className="text-sm text-ash-muted">{error || 'ランキングデータが見つかりませんでした。'}</p>
+      <div className="card p-4 md:p-6 text-center mb-6 md:mb-8">
+        <p className="text-xs md:text-sm text-ash-muted">{error || 'ランキングデータが見つかりませんでした。'}</p>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
       {companies.map((company, index) => {
         const style = rankStyles[index] || rankStyles[rankStyles.length - 1]
         const Icon = style.icon
@@ -110,35 +110,35 @@ export function TopCompaniesHighlight() {
         return (
           <div
             key={company.slug}
-            className={`card p-6 border-2 bg-gradient-to-br ${style.border} ${style.gradient}`}
+            className={`card p-4 md:p-6 border-2 bg-gradient-to-br ${style.border} ${style.gradient}`}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Icon className={`w-8 h-8 ${style.iconColor}`} />
-                <span className={`text-2xl font-bold ${style.labelColor}`}>
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Icon className={`w-6 h-6 md:w-8 md:h-8 ${style.iconColor}`} />
+                <span className={`text-lg md:text-2xl font-bold ${style.labelColor}`}>
                   {index === 0 ? '1st' : index === 1 ? '2nd' : '3rd'}
                 </span>
               </div>
-              <Badge className={`${style.badgeClass} border-0`}>
+              <Badge className={`${style.badgeClass} border-0 text-xs`}>
                 総合評価{company.grade || 'A'}
               </Badge>
             </div>
-            <h3 className="text-xl font-bold mb-2 truncate">{company.name}</h3>
+            <h3 className="text-base md:text-xl font-bold mb-1.5 md:mb-2 truncate">{company.name}</h3>
             {company.industry && (
-              <p className="text-sm text-ash-muted mb-3">{company.industry}</p>
+              <p className="text-xs md:text-sm text-ash-muted mb-2 md:mb-3">{company.industry}</p>
             )}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <Rating value={score} readonly size="sm" />
-                <span className="text-ash-muted text-sm font-medium">{score.toFixed(1)}</span>
+                <span className="text-ash-muted text-xs md:text-sm font-medium">{score.toFixed(1)}</span>
                 <span className="text-xs text-ash-muted">× {company.reviewCount.toLocaleString()}</span>
               </div>
-              <div className="text-xs text-ash-muted">
+              <div className="text-xs text-ash-muted mt-1">
                 スコア: <span className="font-semibold text-ash-text">{company.weightedScore.toFixed(1)}</span>
               </div>
-            <div className="mt-4 pt-4 border-t flex items-center justify-between">
+            <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t flex items-center justify-between">
               <Link
                 href={`/company/${company.slug}`}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-xs md:text-sm text-blue-600 hover:text-blue-800 py-1"
               >
                 詳細を見る →
               </Link>

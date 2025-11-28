@@ -13,7 +13,7 @@ export interface Source {
 
 export interface ApiRequest {
   query: string;
-  mode: 'company' | 'person';
+  mode: 'company' | 'person' | 'service';
   history?: Array<{ role: string; content: string }>;
   companySlug?: string;
   // 絞り込み用の追加フィールド

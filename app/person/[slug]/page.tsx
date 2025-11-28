@@ -6,25 +6,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, User, Building2, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Briefcase, GraduationCap, Award, Globe, Twitter, Linkedin } from 'lucide-react';
+import { Star, User, Building2, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Briefcase, GraduationCap, Award, Globe, Twitter, Linkedin, Camera, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { getUserDisplayName } from '@/lib/user-display';
 import { getRelationshipLabel, RELATIONSHIP_OPTIONS, RELATIONSHIP_TYPES } from '@/lib/relationship';
 import ReactMarkdown from 'react-markdown';
 
+interface Reply {
+  userId: string;
+  content: string;
+  isAnonymous: boolean;
+  createdAt: string;
+  _id: string;
+}
+
 interface Evaluation {
   id: string;
   rating: number;
   relationshipType: number;
-  relationshipLabel: string;
+  relationshipLabel?: string;
   comment: string;
-  timestamp: number;
+  createdAt: string;
   userId: string;
   userName?: string;
   userImage?: string;
   userCompany?: string;
   userRole?: string;
   isAnonymous: boolean;
+  likesCount?: number;
+  repliesCount?: number;
+  replies?: Reply[];
+  categories?: {
+    culture?: number;
+    growth?: number;
+    workLifeBalance?: number;
+    compensation?: number;
+    leadership?: number;
+  };
 }
 
 interface SourceInfo {
@@ -58,6 +76,7 @@ interface PersonData {
   averageRating: number;
   sources?: SourceInfo[];
   editHistory?: EditHistoryEntry[];
+  evaluations?: Evaluation[];
   createdAt: string;
   updatedAt: string;
 }
@@ -77,7 +96,16 @@ interface EditHistoryEntry {
 export default function PersonPage() {
   const params = useParams();
   const personSlug = params.slug as string;
-  const personName = decodeURIComponent(personSlug);
+  // 二重エンコード対策: デコードを繰り返す
+  let personName = personSlug;
+  try {
+    personName = decodeURIComponent(personSlug);
+    if (personName.includes('%')) {
+      personName = decodeURIComponent(personName);
+    }
+  } catch {
+    // デコードエラーの場合は元の値を使用
+  }
 
   const [personData, setPersonData] = useState<PersonData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +117,7 @@ export default function PersonPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     // 認証されたユーザー情報を取得
@@ -226,6 +255,50 @@ export default function PersonPage() {
       }
     } catch (error) {
       console.error('Error sharing:', error);
+    }
+  };
+
+  // 画像アップロード機能
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !personData) return;
+
+    // ファイル検証
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('対応していないファイル形式です。JPEG, PNG, GIF, WebPのみ対応しています。');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ファイルサイズは5MB以下にしてください。');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('personSlug', personData.slug || personData.name);
+
+      const response = await fetch('/api/person-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPersonData(prev => prev ? { ...prev, imageUrl: data.imageUrl } : null);
+        alert('画像をアップロードしました');
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || '画像のアップロードに失敗しました');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('画像のアップロード中にエラーが発生しました');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -401,7 +474,7 @@ URL: ${window.location.href}`;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+      <div className="min-h-screen bg-white">
         <div className="container max-w-screen-xl mx-auto px-4 md:px-6 py-8">
           <div className="text-center">読み込み中...</div>
         </div>
@@ -411,7 +484,7 @@ URL: ${window.location.href}`;
 
   if (error || !personData) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+      <div className="min-h-screen bg-white">
         <div className="container max-w-screen-xl mx-auto px-4 md:px-6 py-8">
           <div className="text-center">
             <p className="text-gray-600 mb-4">{error || '人物データが見つかりません'}</p>
@@ -425,27 +498,44 @@ URL: ${window.location.href}`;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen bg-white">
         {/* ヘッダー */}
         <div className="bg-white border-b border-border">
           <div className="container max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
             {/* スマホ: 縦並び、PC: 横並び */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
-                  {personData.imageUrl ? (
-                    <img
-                      src={personData.imageUrl}
-                      alt={`${personData.name}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = '/avatar5.png';
-                        e.currentTarget.onerror = null;
-                      }}
+                <div className="relative w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
+                  <div className="w-full h-full bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
+                    {personData.imageUrl ? (
+                      <img
+                        src={personData.imageUrl}
+                        alt={`${personData.name}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '/avatar5.png';
+                          e.currentTarget.onerror = null;
+                        }}
+                      />
+                    ) : (
+                      <User className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+                    )}
+                  </div>
+                  {/* 画像アップロードボタン */}
+                  <label className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 bg-bond-pink rounded-full flex items-center justify-center cursor-pointer hover:bg-pink-600 transition-colors shadow-md">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={isUploadingImage}
                     />
-                  ) : (
-                    <User className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                  )}
+                    {isUploadingImage ? (
+                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-white animate-spin" />
+                    ) : (
+                      <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                    )}
+                  </label>
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground truncate">{personData.name}</h1>
@@ -461,7 +551,7 @@ URL: ${window.location.href}`;
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditing(true)}
-                    className="text-bond-pink border-bond-pink hover:bg-bond-pink hover:text-white px-2 sm:px-3"
+                    className="text-bond-pink border-2 border-bond-pink hover:bg-bond-pink hover:text-white px-2 sm:px-3 bg-white"
                   >
                     <Edit3 className="w-4 h-4" />
                     <span className="hidden sm:inline ml-1">編集</span>
@@ -588,7 +678,7 @@ URL: ${window.location.href}`;
                 <div className="mt-4 flex gap-2">
                   <Button
                     onClick={handleSaveEdit}
-                    className="bg-bond-pink hover:bg-bond-pinkDark"
+                    className="bg-bond-pink hover:bg-bond-pinkDark text-white shadow-md"
                   >
                     <Save className="w-4 h-4 mr-1" />
                     保存
@@ -735,6 +825,113 @@ URL: ${window.location.href}`;
                     <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                       {personData.achievements}
                     </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 信頼評価 */}
+              {personData.evaluations && personData.evaluations.length > 0 && (
+                <Card className="overflow-hidden">
+                  <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                      <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+                      信頼評価
+                      <Badge variant="secondary" className="ml-2">
+                        {personData.evaluations.length}件
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      この人物に対する評価・レビュー
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
+                    <div className="space-y-4">
+                      {personData.evaluations.map((evaluation) => (
+                        <div key={evaluation.id} className="border border-border rounded-lg p-3 sm:p-4">
+                          {/* 評価者情報 */}
+                          <div className="flex items-start gap-3 mb-3">
+                            {evaluation.isAnonymous ? (
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <User className="w-5 h-5 text-gray-500" />
+                              </div>
+                            ) : (
+                              <img
+                                src={evaluation.userImage || '/default-avatar.png'}
+                                alt={evaluation.userName || '評価者'}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-sm">
+                                  {evaluation.isAnonymous ? '匿名ユーザー' : evaluation.userName || '評価者'}
+                                </span>
+                                {!evaluation.isAnonymous && evaluation.userCompany && (
+                                  <span className="text-xs text-gray-500">
+                                    {evaluation.userCompany}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                {/* 星評価 */}
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`w-4 h-4 ${
+                                        star <= evaluation.rating
+                                          ? 'text-yellow-400 fill-yellow-400'
+                                          : 'text-gray-300'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                {/* 関係性 */}
+                                <Badge variant="outline" className="text-xs">
+                                  {getRelationshipLabel(evaluation.relationshipType)}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          {/* コメント */}
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                            {evaluation.comment}
+                          </p>
+                          {/* メタ情報 */}
+                          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                            <span>
+                              {new Date(evaluation.createdAt).toLocaleDateString('ja-JP')}
+                            </span>
+                            {evaluation.likesCount !== undefined && evaluation.likesCount > 0 && (
+                              <span className="flex items-center gap-1">
+                                ❤️ {evaluation.likesCount}
+                              </span>
+                            )}
+                            {evaluation.repliesCount !== undefined && evaluation.repliesCount > 0 && (
+                              <span className="flex items-center gap-1">
+                                💬 {evaluation.repliesCount}
+                              </span>
+                            )}
+                          </div>
+                          {/* リプライ表示 */}
+                          {evaluation.replies && evaluation.replies.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <p className="text-xs font-medium text-gray-600 mb-2">返信</p>
+                              <div className="space-y-2">
+                                {evaluation.replies.map((reply) => (
+                                  <div key={reply._id} className="bg-gray-50 rounded-lg p-2 text-sm">
+                                    <p className="text-gray-700">{reply.content}</p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {new Date(reply.createdAt).toLocaleDateString('ja-JP')}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               )}

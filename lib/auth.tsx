@@ -12,6 +12,7 @@ export interface User {
   company?: string;
   image?: string;
   createdAt?: string;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {

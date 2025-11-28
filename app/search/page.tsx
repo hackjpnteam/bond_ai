@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Search, Building2, User, Sparkles, ChevronDown, ChevronUp, Filter, MapPin, Tag, HelpCircle, Lightbulb } from 'lucide-react';
+import { Send, Search, Building2, User, Sparkles, ChevronDown, ChevronUp, Filter, MapPin, Tag, HelpCircle, Lightbulb, Package } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ApiRequest, ApiResponse, CompanyCandidate } from '@/types/bond';
@@ -12,7 +12,7 @@ import { CompanyCandidates } from '@/components/CompanyCandidates';
 
 export default function BondSearchPage() {
   const [query, setQuery] = useState('');
-  const [mode, setMode] = useState<'company' | 'person' | null>(null);
+  const [mode, setMode] = useState<'company' | 'person' | 'service' | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<ApiResponse | null>(null);
   const [lastQuery, setLastQuery] = useState('');
@@ -38,8 +38,8 @@ export default function BondSearchPage() {
   const apiUrl = process.env.NEXT_PUBLIC_BOND_API_URL || '/api/search-summarize';
 
   // カテゴリ選択時のチャット処理
-  const handleCategorySelect = (selectedMode: 'company' | 'person') => {
-    const categoryText = selectedMode === 'company' ? '会社・企業について' : '人物について';
+  const handleCategorySelect = (selectedMode: 'company' | 'person' | 'service') => {
+    const categoryText = selectedMode === 'company' ? '会社について' : selectedMode === 'person' ? '人物について' : 'サービスについて';
     
     // ユーザーメッセージを追加
     const userMessage = { role: 'user' as const, content: categoryText };
@@ -50,9 +50,10 @@ export default function BondSearchPage() {
     
     // アシスタントの返答を追加
     setTimeout(() => {
-      const assistantMessage = { 
-        role: 'assistant' as const, 
-        content: `${selectedMode === 'company' ? '会社・企業' : '人物'}についてですね！どちらについてお調べしましょうか？` 
+      const modeLabel = selectedMode === 'company' ? '会社' : selectedMode === 'person' ? '人物' : 'サービス';
+      const assistantMessage = {
+        role: 'assistant' as const,
+        content: `${modeLabel}についてですね！どちらについてお調べしましょうか？`
       };
       setMessages(prev => [...prev, assistantMessage]);
     }, 500);
@@ -105,7 +106,7 @@ export default function BondSearchPage() {
     }, 500);
   };
 
-  const saveSearchHistory = async (searchQuery: string, searchMode: 'company' | 'person') => {
+  const saveSearchHistory = async (searchQuery: string, searchMode: 'company' | 'person' | 'service') => {
     try {
       await fetch('/api/search-history', {
         method: 'POST',
@@ -325,7 +326,7 @@ export default function BondSearchPage() {
           <h1 className="text-lg font-semibold text-foreground">Bond検索</h1>
           {mode && (
             <Badge variant="outline" className="text-xs">
-              {mode === 'company' ? '企業検索' : '人物検索'}
+              {mode === 'company' ? '企業検索' : mode === 'person' ? '人物検索' : 'サービス検索'}
             </Badge>
           )}
         </div>
@@ -360,7 +361,7 @@ export default function BondSearchPage() {
                               className="flex items-center gap-2 px-4 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all font-medium border border-primary/20 hover:border-primary/30"
                             >
                               <Building2 className="w-4 h-4" />
-                              会社・企業について
+                              会社について
                             </button>
                             <button
                               onClick={() => handleCategorySelect('person')}
@@ -368,6 +369,13 @@ export default function BondSearchPage() {
                             >
                               <User className="w-4 h-4" />
                               人物について
+                            </button>
+                            <button
+                              onClick={() => handleCategorySelect('service')}
+                              className="flex items-center gap-2 px-4 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all font-medium border border-primary/20 hover:border-primary/30"
+                            >
+                              <Package className="w-4 h-4" />
+                              サービスについて
                             </button>
                           </div>
 
@@ -433,6 +441,12 @@ export default function BondSearchPage() {
                                         「<span className="text-primary font-medium">戸村光</span>」「<span className="text-primary font-medium">hackjpn CEO</span>」「<span className="text-primary font-medium">投資家</span>」
                                       </p>
                                     </div>
+                                    <div className="p-3 bg-white/70 dark:bg-black/20 rounded-lg border border-amber-200/50 dark:border-amber-700/50">
+                                      <p className="text-xs text-amber-600 dark:text-amber-400 mb-1 font-medium">サービス検索の例</p>
+                                      <p className="text-sm text-foreground">
+                                        「<span className="text-primary font-medium">ChatGPT</span>」「<span className="text-primary font-medium">Slack</span>」「<span className="text-primary font-medium">Notion AI機能</span>」
+                                      </p>
+                                    </div>
                                   </div>
 
                                   <div className="flex items-start gap-2 pt-2 border-t border-amber-200/50 dark:border-amber-700/50">
@@ -462,7 +476,7 @@ export default function BondSearchPage() {
                             <span className="text-xs font-medium text-muted-foreground">Bond</span>
                           </div>
                           <p className="leading-relaxed">
-                            {mode === 'company' ? '会社・企業' : '人物'}についてですね！どちらについてお調べしましょうか？
+                            {mode === 'company' ? '会社' : mode === 'person' ? '人物' : 'サービス'}についてですね！どちらについてお調べしましょうか？
                           </p>
                           {mode === 'company' && (
                             <div className="mt-4 space-y-4">
@@ -569,8 +583,62 @@ export default function BondSearchPage() {
                               </div>
                             </div>
                           )}
+                          {mode === 'service' && (
+                            <div className="mt-4 space-y-4">
+                              {/* 検索のコツ */}
+                              <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                                    <Sparkles className="w-4 h-4 text-primary" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-foreground mb-1">
+                                      🎯 より精度の高い検索のコツ
+                                    </p>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                      サービス名に加えて、<span className="text-primary font-medium">提供会社</span>や<span className="text-primary font-medium">カテゴリ</span>などを入力すると、より正確な情報をお届けできます。
+                                    </p>
+                                    <div className="mt-3 p-3 bg-background/80 rounded-lg border border-border/50">
+                                      <p className="text-xs text-muted-foreground mb-1.5">例えば...</p>
+                                      <p className="text-sm text-foreground font-medium">
+                                        「<span className="text-primary">ChatGPT</span>」+「<span className="text-primary">OpenAI</span>」+「<span className="text-primary">AI チャット</span>」
+                                      </p>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                      💡 下の「絞り込みオプション」から詳細条件を設定できます
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 人気の検索 */}
+                              <div>
+                                <p className="text-sm text-muted-foreground mb-2">人気のサービス検索：</p>
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    onClick={() => handleSampleSelect('ChatGPT')}
+                                    className="px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors cursor-pointer border border-primary/20"
+                                  >
+                                    ChatGPT
+                                  </button>
+                                  <button
+                                    onClick={() => handleSampleSelect('Slack')}
+                                    className="px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors cursor-pointer border border-primary/20"
+                                  >
+                                    Slack
+                                  </button>
+                                  <button
+                                    onClick={() => handleSampleSelect('Notion')}
+                                    className="px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors cursor-pointer border border-primary/20"
+                                  >
+                                    Notion
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                           <p className="text-sm text-muted-foreground mt-3">
-                            気になる{mode === 'company' ? '企業名' : '人名'}を下の入力欄に打ち込んでくださいね！
+                            気になる{mode === 'company' ? '企業名' : mode === 'person' ? '人名' : 'サービス名'}を下の入力欄に打ち込んでくださいね！
                           </p>
                         </div>
                       </div>
@@ -763,7 +831,7 @@ export default function BondSearchPage() {
                           )}
                         </div>
                         <p className={`text-xs ${showFilters ? 'text-white/80' : 'text-pink-500 dark:text-pink-400'}`}>
-                          {mode === 'company' ? '業界・地域で検索精度UP' : '所属・専門分野で検索精度UP'}
+                          {mode === 'company' ? '業界・地域で検索精度UP' : mode === 'person' ? '所属・専門分野で検索精度UP' : 'カテゴリ・提供会社で検索精度UP'}
                         </p>
                       </div>
                     </div>
@@ -780,13 +848,13 @@ export default function BondSearchPage() {
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-xs font-medium text-pink-600 dark:text-pink-400">
                         <Tag className="w-3.5 h-3.5" />
-                        {mode === 'company' ? 'カテゴリ/業界' : '所属/専門分野'}
+                        {mode === 'company' ? 'カテゴリ/業界' : mode === 'person' ? '所属/専門分野' : 'カテゴリ/用途'}
                       </label>
                       <input
                         type="text"
                         value={categoryKeyword}
                         onChange={(e) => setCategoryKeyword(e.target.value)}
-                        placeholder={mode === 'company' ? '例: 医療系スタートアップ, SaaS, ヘルスケア' : '例: Google, AI研究者, 投資家, 起業家'}
+                        placeholder={mode === 'company' ? '例: 医療系スタートアップ, SaaS, ヘルスケア' : mode === 'person' ? '例: Google, AI研究者, 投資家, 起業家' : '例: チャットボット, プロジェクト管理, AI, SaaS'}
                         className="w-full h-10 px-3 text-sm rounded-lg border border-pink-200/60 dark:border-pink-800/40 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-400/40 focus:border-pink-400"
                         disabled={loading}
                       />
@@ -794,13 +862,13 @@ export default function BondSearchPage() {
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-xs font-medium text-pink-600 dark:text-pink-400">
                         <MapPin className="w-3.5 h-3.5" />
-                        {mode === 'company' ? '地域/市場' : '地域/活動拠点'}
+                        {mode === 'company' ? '地域/市場' : mode === 'person' ? '地域/活動拠点' : '提供会社/プラットフォーム'}
                       </label>
                       <input
                         type="text"
                         value={regionKeyword}
                         onChange={(e) => setRegionKeyword(e.target.value)}
-                        placeholder={mode === 'company' ? '例: 日本, 米国, 東証グロース' : '例: 日本, シリコンバレー, 東京'}
+                        placeholder={mode === 'company' ? '例: 日本, 米国, 東証グロース' : mode === 'person' ? '例: 日本, シリコンバレー, 東京' : '例: OpenAI, Google, Microsoft, Atlassian'}
                         className="w-full h-10 px-3 text-sm rounded-lg border border-pink-200/60 dark:border-pink-800/40 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-400/40 focus:border-pink-400"
                         disabled={loading}
                       />
@@ -834,7 +902,7 @@ export default function BondSearchPage() {
                   ? '満足度調査に回答してください'
                   : mode === null
                   ? 'まず上でカテゴリを選んでください'
-                  : `${mode === 'company' ? '会社' : '人物'}名を入力...`
+                  : `${mode === 'company' ? '会社' : mode === 'person' ? '人物' : 'サービス'}名を入力...`
               }
               disabled={mode === null || showSatisfactionSurvey || showFeedbackInput}
             />

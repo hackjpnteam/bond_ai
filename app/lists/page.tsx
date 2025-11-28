@@ -442,8 +442,26 @@ export default function ListsPage() {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className={`p-2 rounded-lg ${item.type === 'company' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                            {item.type === 'company' ? <Building2 className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                          <div className={`w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center ${item.type === 'company' ? 'bg-blue-100' : 'bg-green-100'}`}>
+                            {item.type === 'company' ? (
+                              <img
+                                src={`/api/company-logo/${encodeURIComponent(item.slug || item.name.toLowerCase())}`}
+                                alt={`${item.name} ロゴ`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (fallback) fallback.style.display = 'flex';
+                                }}
+                              />
+                            ) : (
+                              <User className="w-5 h-5 text-green-700" />
+                            )}
+                            {item.type === 'company' && (
+                              <div className="w-full h-full items-center justify-center hidden text-blue-700">
+                                <Building2 className="w-5 h-5" />
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <CardTitle className="text-lg truncate">
@@ -533,8 +551,28 @@ export default function ListsPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className={`p-2 rounded-lg ${getItemTypeColor(item.itemType)}`}>
-                          {getItemIcon(item.itemType)}
+                        <div className={`w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center ${getItemTypeColor(item.itemType)}`}>
+                          {item.itemType === 'company' ? (
+                            <>
+                              <img
+                                src={`/api/company-logo/${encodeURIComponent(item.itemData.slug || item.itemData.name.toLowerCase())}`}
+                                alt={`${item.itemData.name} ロゴ`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (fallback) fallback.style.display = 'flex';
+                                }}
+                              />
+                              <div className="w-full h-full items-center justify-center hidden">
+                                <Building2 className="w-5 h-5" />
+                              </div>
+                            </>
+                          ) : item.itemType === 'person' ? (
+                            <User className="w-5 h-5" />
+                          ) : (
+                            getItemIcon(item.itemType)
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg truncate">

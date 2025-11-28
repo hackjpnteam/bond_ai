@@ -10,47 +10,47 @@ export function HeroSection() {
 
   return (
     <>
-      <section className="section">
-        <div className="container-narrow mx-auto px-4">
-          <div className="relative overflow-hidden rounded-2xl border border-ash-line bg-hero-gradient p-10 md:p-16">
+      <section className="section pt-4 pb-8 md:py-12">
+        <div className="container-narrow mx-auto px-3 md:px-4">
+          <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-ash-line bg-hero-gradient p-6 sm:p-8 md:p-16">
             {/* 薄い紙のような表面感 */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/60 via-white/30 to-transparent" />
 
             {/* タイトル */}
             <div className="relative z-10 text-center">
-              
-              <h1 className="text-center animate-slide-in-left mb-6 text-3xl md:text-4xl lg:text-5xl font-serif font-bold tracking-wide leading-relaxed">
-                信頼でつながる最適な出会いを。
+
+              <h1 className="text-center animate-slide-in-left mb-4 md:mb-6 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-bold tracking-wide leading-tight md:leading-relaxed">
+                信頼でつながる<br className="sm:hidden" />最適な出会いを。
               </h1>
-              
-              <p className="mx-auto max-w-3xl text-center mb-8 animate-slide-in-right font-medium leading-relaxed" style={{animationDelay: '0.3s'}}>
-                Bondは、あなたの「会いたい企業・投資家・顧客」を信頼スコアに基づいて導き出す<br className="hidden md:block" />
-                ビジネスマッチングプラットフォームです。
+
+              <p className="mx-auto max-w-3xl text-center mb-6 md:mb-8 animate-slide-in-right font-medium leading-relaxed text-sm sm:text-base" style={{animationDelay: '0.3s'}}>
+                Bondは、あなたの「会いたい企業・投資家・顧客」を<br className="hidden sm:block" />
+                信頼スコアに基づいて導き出すビジネスマッチングプラットフォームです。
               </p>
-              
-              <p className="mx-auto max-w-2xl text-center mb-12 animate-slide-in-right text-sm md:text-base leading-relaxed" style={{animationDelay: '0.4s'}}>
-                起業家・投資家・営業担当・仲介者のすべてが、<br className="hidden md:block" />
+
+              <p className="mx-auto max-w-2xl text-center mb-8 md:mb-12 animate-slide-in-right text-xs sm:text-sm md:text-base leading-relaxed text-ash-muted" style={{animationDelay: '0.4s'}}>
+                起業家・投資家・営業担当・仲介者のすべてが、<br className="hidden sm:block" />
                 "信頼経済圏"の中で成長を加速させます。
               </p>
-              
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 text-lg font-medium" style={{animationDelay: '0.5s'}}>
+
+              <div className="flex flex-col items-center justify-center gap-3 md:gap-4 mb-8 md:mb-12 text-sm sm:text-base md:text-lg font-medium" style={{animationDelay: '0.5s'}}>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">📈</span>
+                  <span className="text-xl md:text-2xl">📈</span>
                   <span>信頼で見つかる最適ルート</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">🔍</span>
+                  <span className="text-xl md:text-2xl">🔍</span>
                   <span>Bondで評価する・つながる・動く</span>
                 </div>
               </div>
 
               {/* CTA */}
-              <div className="flex items-center justify-center gap-3 animate-fade-in-up" style={{animationDelay: '0.7s'}}>
-                <Link href="/signup" className="btn-dark group">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-in-up" style={{animationDelay: '0.7s'}}>
+                <Link href="/signup" className="btn-dark group w-full sm:w-auto text-center py-3 px-6">
                   無料で始める
                   <ArrowRight className="inline-block w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link href="/letter" className="btn-ol group">
+                <Link href="/letter" className="btn-ol group w-full sm:w-auto text-center py-3 px-6">
                   はじめに
                 </Link>
               </div>

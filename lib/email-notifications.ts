@@ -4,8 +4,8 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://bond.giving';
-const FROM_EMAIL = 'Bond <noreply@bond.giving>';
+const APP_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://bond.giving';
+const FROM_EMAIL = 'Bond <team@hackjpn.com>';
 
 type NotificationType = 'connection_request' | 'connection_accepted' | 'evaluation' | 'message' | 'system';
 

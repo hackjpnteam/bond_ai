@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
 import connectDB from '@/lib/mongodb';
 import Evaluation from '@/models/Evaluation';
 import User from '@/models/User';
@@ -7,6 +9,8 @@ import { getRelationshipLabel } from '@/lib/relationship';
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
+    const session = await getServerSession(authOptions);
+    const currentUserId = session?.user?.id;
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -22,6 +26,7 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
+    // 評価者のユーザーIDを収集
     const userIds = [
       ...new Set(
         evaluations
@@ -30,14 +35,23 @@ export async function GET(request: NextRequest) {
       )
     ];
 
-    const users = userIds.length
-      ? await User.find({ _id: { $in: userIds } })
+    // リプライのユーザーIDも収集
+    const replyUserIds = evaluations.flatMap(evaluation =>
+      (evaluation.replies || [])
+        .filter((r: any) => !r.isAnonymous)
+        .map((r: any) => r.userId)
+    );
+
+    const allUserIds = [...new Set([...userIds, ...replyUserIds])];
+
+    const users = allUserIds.length
+      ? await User.find({ _id: { $in: allUserIds } })
           .select('name image')
           .lean()
       : [];
 
     const userMap = new Map(
-      users.map(user => [user._id.toString(), { name: user.name, image: user.image }])
+      users.map(user => [user._id.toString(), { _id: user._id.toString(), name: user.name, image: user.image }])
     );
 
     // タイムライン用にデータを整形
@@ -48,6 +62,17 @@ export async function GET(request: NextRequest) {
           : userMap.get(evaluation.userId?.toString() || '');
 
       const relationshipType = evaluation.relationshipType ?? 0;
+      const likes = evaluation.likes || [];
+      const replies = evaluation.replies || [];
+
+      // リプライにユーザー情報を付加
+      const repliesWithUsers = replies.map((reply: any) => ({
+        userId: reply.userId,
+        content: reply.content,
+        isAnonymous: reply.isAnonymous,
+        createdAt: reply.createdAt,
+        user: reply.isAnonymous ? null : userMap.get(reply.userId) || null
+      }));
 
       return {
         _id: evaluation._id.toString(),
@@ -66,7 +91,11 @@ export async function GET(request: NextRequest) {
           slug: evaluation.companySlug,
           logoUrl: '/default-company.png'
         },
-        isAnonymous: evaluation.isAnonymous || false
+        isAnonymous: evaluation.isAnonymous || false,
+        likesCount: likes.length,
+        hasLiked: currentUserId ? likes.includes(currentUserId) : false,
+        repliesCount: replies.length,
+        replies: repliesWithUsers
       };
     });
 

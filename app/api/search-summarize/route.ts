@@ -327,13 +327,13 @@ function applyBondMetadata(
   response: ApiResponse,
   companyDoc: any | undefined | null,
   query: string,
-  mode: 'company' | 'person' = 'company'
+  mode: 'company' | 'person' | 'service' = 'company'
 ): ApiResponse {
   if (!companyDoc) {
     // DBに企業/人物データがない場合でも、クエリからslugを生成してリンクを作成
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const generatedSlug = query.toLowerCase().replace(/\s+/g, '-');
-    const pathPrefix = mode === 'person' ? 'person' : 'company';
+    const pathPrefix = mode === 'person' ? 'person' : mode === 'service' ? 'service' : 'company';
     const bondPageUrl = `${appUrl}/${pathPrefix}/${encodeURIComponent(generatedSlug)}`;
 
     return {
@@ -345,7 +345,7 @@ function applyBondMetadata(
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const pathPrefix = mode === 'person' ? 'person' : 'company';
+  const pathPrefix = mode === 'person' ? 'person' : mode === 'service' ? 'service' : 'company';
   const bondPageUrl = `${appUrl}/${pathPrefix}/${encodeURIComponent(companyDoc.slug)}`;
 
   return {

@@ -77,12 +77,40 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
       });
     });
 
+    // リプライのユーザー情報も取得
+    const replyUserIds = evaluations.flatMap(evaluation =>
+      (evaluation.replies || [])
+        .filter((r: any) => !r.isAnonymous)
+        .map((r: any) => r.userId)
+        .filter((id: any) => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id))
+    );
+
+    const replyUserObjectIds = Array.from(new Set(replyUserIds)).map((id) => new mongoose.Types.ObjectId(id as string));
+    const replyUsers = replyUserObjectIds.length
+      ? await User.find({ _id: { $in: replyUserObjectIds } })
+          .select('_id name image')
+          .lean()
+      : [];
+
+    const replyUserMap = new Map(replyUsers.map(u => [u._id.toString(), u]));
+
     return new Response(
       JSON.stringify({
         success: true,
         evaluations: evaluations.map(evaluation => {
           const userDetails = evaluation.userId ? userDetailsMap.get(evaluation.userId.toString()) : null;
           const relationshipType = evaluation.relationshipType ?? 0;
+          const likes = evaluation.likes || [];
+          const replies = evaluation.replies || [];
+
+          // リプライにユーザー情報を付加
+          const repliesWithUsers = replies.map((reply: any) => ({
+            userId: reply.userId,
+            content: reply.content,
+            isAnonymous: reply.isAnonymous,
+            createdAt: reply.createdAt,
+            user: reply.isAnonymous ? null : replyUserMap.get(reply.userId) || null
+          }));
 
           return {
             id: evaluation._id.toString(),
@@ -98,7 +126,11 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
             createdAt: evaluation.createdAt,
             updatedAt: evaluation.updatedAt,
             userId: evaluation.userId,
-            user: userDetails
+            user: userDetails,
+            likesCount: likes.length,
+            hasLiked: likes.includes(userId),
+            repliesCount: replies.length,
+            replies: repliesWithUsers
           };
         })
       }),

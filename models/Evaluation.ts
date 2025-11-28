@@ -1,5 +1,12 @@
 import mongoose, { Document, Model, Schema } from 'mongoose';
 
+export interface IReply {
+  userId: string;
+  content: string;
+  isAnonymous: boolean;
+  createdAt: Date;
+}
+
 export interface IEvaluation extends Document {
   userId: string;
   companyName: string;
@@ -20,6 +27,8 @@ export interface IEvaluation extends Document {
     editedAt: Date;
     reason?: string;
   }>;
+  likes: string[]; // Array of user IDs who liked
+  replies: IReply[];
   isPublic: boolean;
   isAnonymous: boolean;
   createdAt: Date;
@@ -75,6 +84,16 @@ const EvaluationSchema: Schema<IEvaluation> = new Schema({
     previousComment: { type: String, default: '' },
     editedAt: { type: Date, default: Date.now },
     reason: { type: String, maxlength: 500 }
+  }],
+  likes: [{
+    type: String,
+    ref: 'User'
+  }],
+  replies: [{
+    userId: { type: String, required: true, ref: 'User' },
+    content: { type: String, required: true, maxlength: 500 },
+    isAnonymous: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
   }],
   isPublic: {
     type: Boolean,

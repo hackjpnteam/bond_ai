@@ -29,7 +29,7 @@ interface CompanyEvaluations {
 
 interface ChatResultBubbleProps {
   result: ApiResponse;
-  mode: 'company' | 'person' | null;
+  mode: 'company' | 'person' | 'service' | null;
   company: string;
 }
 

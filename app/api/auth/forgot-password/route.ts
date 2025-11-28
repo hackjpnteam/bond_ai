@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import connectDB from '@/lib/mongodb';
+import User from '@/models/User';
+import crypto from 'crypto';
 
 interface ForgotPasswordRequest {
   email: string;
@@ -26,21 +29,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 実際の実装では、データベースでユーザーの存在確認
-    // ここでは簡易的にテストユーザーをチェック
-    const testUsers = ['test@bond.ai', 'tanaka@example.com'];
-    const userExists = testUsers.includes(email.toLowerCase());
+    await connectDB();
+
+    // データベースでユーザーの存在確認
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     // セキュリティ上、ユーザーが存在しない場合でも成功レスポンスを返す
     // （アカウント列挙攻撃を防ぐため）
 
     // パスワードリセットトークンを生成
     const resetToken = generateResetToken();
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
-    if (userExists) {
+    if (user) {
+      // トークンをユーザーに保存（有効期限: 24時間）
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await user.save();
+
       await sendPasswordResetEmail(email, resetUrl);
-      console.log(`Password reset token for ${email}: ${resetToken}`);
+      console.log(`Password reset email sent to ${email}`);
     }
 
     // 常に成功レスポンスを返す
@@ -201,7 +210,7 @@ async function sendPasswordResetEmail(email: string, resetUrl: string) {
 
   const resend = new Resend(apiKey);
   await resend.emails.send({
-    from: 'Bond <noreply@bond.ai>',
+    from: 'Bond <team@hackjpn.com>',
     to: [email],
     subject: 'Bondパスワードリセットのご案内',
     html: createPasswordResetEmailHtml(email, resetUrl),

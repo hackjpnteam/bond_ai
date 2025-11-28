@@ -14,6 +14,7 @@ export interface AuthenticatedUser {
   image?: string;
   username?: string;
   createdAt?: string;
+  isAdmin?: boolean;
 }
 
 export async function validateSession(request: NextRequest): Promise<AuthenticatedUser | null> {
@@ -62,7 +63,8 @@ export async function validateSession(request: NextRequest): Promise<Authenticat
             role: user.role || 'other',
             company: user.company,
             image: profileImage,
-            createdAt: user.createdAt?.toISOString()
+            createdAt: user.createdAt?.toISOString(),
+            isAdmin: user.isAdmin || false
           };
         } else {
           console.log('⚠️ [validateSession] User not found in DB, creating new user...');
@@ -86,7 +88,8 @@ export async function validateSession(request: NextRequest): Promise<Authenticat
             role: newUser.role || 'other',
             company: newUser.company,
             image: newUser.image,
-            createdAt: newUser.createdAt?.toISOString()
+            createdAt: newUser.createdAt?.toISOString(),
+            isAdmin: false
           };
         }
       }
@@ -147,7 +150,8 @@ export async function validateSession(request: NextRequest): Promise<Authenticat
       role: user.role,
       company: user.company,
       image: profileImage,
-      createdAt: user.createdAt?.toISOString()
+      createdAt: user.createdAt?.toISOString(),
+      isAdmin: user.isAdmin || false
     };
 
   } catch (error) {

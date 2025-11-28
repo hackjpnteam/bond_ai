@@ -28,6 +28,9 @@ export interface IUser extends Document {
   onboardingCompleted: boolean;
   trustmapOgImageUrl?: string; // トラストマップOGP画像URL
   emailNotifications?: IEmailNotificationSettings; // メール通知設定
+  resetPasswordToken?: string; // パスワードリセットトークン
+  resetPasswordExpires?: Date; // トークン有効期限
+  isAdmin: boolean; // アドミン権限
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -147,6 +150,16 @@ const UserSchema: Schema<IUser> = new Schema({
       evaluation: true,
       system: true
     }
+  },
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpires: {
+    type: Date
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

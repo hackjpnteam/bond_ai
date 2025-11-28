@@ -3,11 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Star, Clock, Building2, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Star, Clock, User, Heart, MessageCircle, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
-import { getRelationshipLabel } from '@/lib/relationship';
 import { getCompanyLogoPath } from '@/lib/utils';
 import { LockedFeature } from '@/components/OnboardingBanner';
+import { useAuth } from '@/lib/auth';
+
+interface Reply {
+  userId: string;
+  content: string;
+  isAnonymous: boolean;
+  createdAt: string;
+  user: {
+    _id: string;
+    name: string;
+    image: string;
+  } | null;
+}
 
 interface Evaluation {
   id: string;
@@ -21,12 +35,21 @@ interface Evaluation {
   userImage: string;
   company: string;
   isAnonymous: boolean;
+  likesCount: number;
+  hasLiked: boolean;
+  repliesCount: number;
+  replies: Reply[];
 }
 
 export default function TimelinePage() {
+  const { user } = useAuth();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [relationshipFilter, setRelationshipFilter] = useState<number | 'all'>('all');
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [submittingReply, setSubmittingReply] = useState<string | null>(null);
+  const [likingId, setLikingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTimeline();
@@ -53,7 +76,11 @@ export default function TimelinePage() {
           userName: item.user?.name || 'Anonymous User',
           userImage: item.user?.image || '/avatar5.png',
           company: item.company?.name || 'Unknown Company',
-          isAnonymous: item.isAnonymous || false
+          isAnonymous: item.isAnonymous || false,
+          likesCount: item.likesCount || 0,
+          hasLiked: item.hasLiked || false,
+          repliesCount: item.repliesCount || 0,
+          replies: item.replies || []
         }));
 
         setEvaluations(formattedEvaluations);
@@ -63,6 +90,85 @@ export default function TimelinePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLike = async (evaluationId: string) => {
+    setLikingId(evaluationId);
+    try {
+      const response = await fetch(`/api/evaluations/${evaluationId}/like`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (response.status === 401) {
+        alert('いいねするにはログインが必要です');
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        setEvaluations(prev => prev.map(e =>
+          e.id === evaluationId
+            ? { ...e, hasLiked: data.liked, likesCount: data.likesCount }
+            : e
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+    } finally {
+      setLikingId(null);
+    }
+  };
+
+  const handleReply = async (evaluationId: string) => {
+    const content = replyInputs[evaluationId]?.trim();
+    if (!content) return;
+
+    setSubmittingReply(evaluationId);
+    try {
+      const response = await fetch(`/api/evaluations/${evaluationId}/replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content, isAnonymous: false })
+      });
+
+      if (response.status === 401) {
+        alert('リプライするにはログインが必要です');
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        setEvaluations(prev => prev.map(e =>
+          e.id === evaluationId
+            ? {
+                ...e,
+                repliesCount: data.repliesCount,
+                replies: [...e.replies, data.reply]
+              }
+            : e
+        ));
+        setReplyInputs(prev => ({ ...prev, [evaluationId]: '' }));
+        setExpandedReplies(prev => new Set(prev).add(evaluationId));
+      }
+    } catch (error) {
+      console.error('Failed to add reply:', error);
+    } finally {
+      setSubmittingReply(null);
+    }
+  };
+
+  const toggleReplies = (evaluationId: string) => {
+    setExpandedReplies(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(evaluationId)) {
+        newSet.delete(evaluationId);
+      } else {
+        newSet.add(evaluationId);
+      }
+      return newSet;
+    });
   };
 
   const formatTimestamp = (timestamp: number) => {
@@ -77,6 +183,18 @@ export default function TimelinePage() {
     if (diffHours < 24) return `${diffHours}時間前`;
     if (diffDays < 7) return `${diffDays}日前`;
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const formatReplyTimestamp = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    if (diffMins < 60) return `${diffMins}分前`;
+    if (diffHours < 24) return `${diffHours}時間前`;
+    return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
   };
 
   const renderStars = (count: number) => {
@@ -226,7 +344,7 @@ export default function TimelinePage() {
               {filteredEvaluations.map((evaluation) => (
                 <Card key={evaluation.id} className="hover:shadow-lg transition-shadow overflow-hidden">
                   <CardContent className="p-3 sm:p-4">
-                    {/* ヘッダー: アバター・名前・バッジ・会社・星・日付 */}
+                    {/* ヘッダー: アバター・ユーザー名・関係性・会社名・を評価しました・星・日付 - デスクトップで一行 */}
                     <div className="flex items-center gap-2 mb-2">
                       {/* アバター */}
                       <div className="flex-shrink-0">
@@ -246,45 +364,157 @@ export default function TimelinePage() {
                         )}
                       </div>
 
-                      {/* ユーザー情報 */}
-                      <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5 sm:gap-2">
-                        <span className="font-medium text-gray-900 text-sm">
+                      {/* メイン情報 - デスクトップでは一行、モバイルでは折り返し */}
+                      <div className="flex-1 min-w-0 flex flex-wrap sm:flex-nowrap items-center gap-1 sm:gap-1.5">
+                        {/* ユーザー名 */}
+                        <span className="font-medium text-gray-900 text-sm whitespace-nowrap">
                           {evaluation.isAnonymous ? '匿名ユーザー' : (evaluation.userName || 'Anonymous User')}
                         </span>
-                        <Badge variant="outline" className="text-xs">
+                        <span className="text-gray-500 text-sm hidden sm:inline">が</span>
+                        {/* 関係性バッジ */}
+                        <Badge variant="outline" className="text-xs whitespace-nowrap">
                           {evaluation.relationshipLabel}
                         </Badge>
+                        {/* 会社リンク */}
+                        <Link
+                          href={`/company/${encodeURIComponent(evaluation.company)}`}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 hover:bg-primary/20 text-primary rounded text-sm font-medium transition-colors whitespace-nowrap"
+                        >
+                          <img
+                            src={getCompanyLogoPath(evaluation.company)}
+                            alt={evaluation.company}
+                            className="w-4 h-4 rounded object-contain flex-shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.src = '/bond-logo.png';
+                              e.currentTarget.onerror = null;
+                            }}
+                          />
+                          {evaluation.company}
+                        </Link>
+                        <span className="text-gray-600 text-sm whitespace-nowrap">を評価</span>
+                        {/* 星評価 */}
                         {renderStars(evaluation.rating)}
-                        <span className="text-gray-500 text-xs ml-auto">
+                        {/* 日付 - 右端に配置 */}
+                        <span className="text-gray-500 text-xs ml-auto whitespace-nowrap">
                           {formatTimestamp(evaluation.timestamp)}
                         </span>
                       </div>
                     </div>
 
-                    {/* 会社リンク */}
-                    <div className="mb-2">
-                      <Link
-                        href={`/company/${encodeURIComponent(evaluation.company)}`}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md text-sm font-medium transition-colors"
-                      >
-                        <img
-                          src={getCompanyLogoPath(evaluation.company)}
-                          alt={evaluation.company}
-                          className="w-4 h-4 rounded object-contain flex-shrink-0"
-                          onError={(e) => {
-                            e.currentTarget.src = '/bond-logo.png';
-                            e.currentTarget.onerror = null;
-                          }}
-                        />
-                        {evaluation.company}
-                      </Link>
-                      <span className="text-gray-600 text-sm ml-1">を評価</span>
-                    </div>
-
                     {/* コメント: 横幅いっぱい、改行反映 */}
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words mb-3">
                       {evaluation.comment}
                     </p>
+
+                    {/* いいね・リプライボタン */}
+                    <div className="flex items-center gap-4 pt-2 border-t border-gray-100">
+                      <button
+                        onClick={() => handleLike(evaluation.id)}
+                        disabled={likingId === evaluation.id}
+                        className={`flex items-center gap-1.5 text-sm transition-colors ${
+                          evaluation.hasLiked
+                            ? 'text-red-500'
+                            : 'text-gray-500 hover:text-red-500'
+                        }`}
+                      >
+                        <Heart
+                          className={`w-4 h-4 ${evaluation.hasLiked ? 'fill-red-500' : ''}`}
+                        />
+                        <span>{evaluation.likesCount > 0 ? evaluation.likesCount : ''}</span>
+                        <span className="hidden sm:inline">いいね</span>
+                      </button>
+
+                      <button
+                        onClick={() => toggleReplies(evaluation.id)}
+                        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-500 transition-colors"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        <span>{evaluation.repliesCount > 0 ? evaluation.repliesCount : ''}</span>
+                        <span className="hidden sm:inline">リプライ</span>
+                        {expandedReplies.has(evaluation.id) ? (
+                          <ChevronUp className="w-3 h-3" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* リプライセクション */}
+                    {expandedReplies.has(evaluation.id) && (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        {/* 既存のリプライ */}
+                        {evaluation.replies.length > 0 && (
+                          <div className="space-y-2 mb-3">
+                            {evaluation.replies.map((reply, index) => (
+                              <div key={index} className="flex gap-2 pl-2 border-l-2 border-gray-200">
+                                <div className="flex-shrink-0">
+                                  {reply.isAnonymous || !reply.user ? (
+                                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                                      <User className="w-3 h-3 text-gray-500" />
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={reply.user.image || '/avatar5.png'}
+                                      alt={reply.user.name}
+                                      className="w-6 h-6 rounded-full object-cover"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = '/avatar5.png';
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-gray-900">
+                                      {reply.isAnonymous ? '匿名' : reply.user?.name || '匿名'}
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      {formatReplyTimestamp(reply.createdAt)}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-700 break-words">
+                                    {reply.content}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* リプライ入力 */}
+                        {user && (
+                          <div className="flex gap-2">
+                            <Textarea
+                              value={replyInputs[evaluation.id] || ''}
+                              onChange={(e) => setReplyInputs(prev => ({
+                                ...prev,
+                                [evaluation.id]: e.target.value
+                              }))}
+                              placeholder="リプライを入力..."
+                              className="flex-1 min-h-[60px] max-h-24 text-sm resize-none"
+                              maxLength={500}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleReply(evaluation.id)}
+                              disabled={submittingReply === evaluation.id || !replyInputs[evaluation.id]?.trim()}
+                              className="self-end"
+                            >
+                              <Send className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+
+                        {!user && (
+                          <p className="text-xs text-gray-500 text-center py-2">
+                            <Link href="/login" className="text-blue-600 hover:underline">
+                              ログイン
+                            </Link>
+                            してリプライする
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb'
 import Message from '@/models/Message'
 import User from '@/models/User'
 import Notification from '@/models/Notification'
+import { createNotificationWithEmail } from '@/lib/email-notifications'
 import mongoose from 'mongoose'
 
 // メッセージ一覧取得 (受信・送信両方)
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     // メッセージ受信通知を作成
     try {
-      await Notification.create({
+      await createNotificationWithEmail(Notification, User, {
         recipient: recipient._id,
         type: 'message',
         title: '新しいメッセージ',

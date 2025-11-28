@@ -10,6 +10,7 @@ import {
 import { ApiRequest, ApiResponse, Source, Fact, CompanyCandidate } from '@/types/bond';
 import dbConnect from '@/lib/mongodb';
 import Company from '@/models/Company';
+import Person from '@/models/Person';
 import Evaluation from '@/models/Evaluation';
 import User from '@/models/User';
 import mongoose from 'mongoose';
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
           took_ms: Date.now() - startTime
         };
         response = await attachEnrichment(response, matchedCompany);
-        response = applyBondMetadata(response, matchedCompany, query);
+        response = applyBondMetadata(response, matchedCompany, query, mode);
         return NextResponse.json(response);
       }
 
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
           took_ms: Date.now() - startTime
         };
         response = await attachEnrichment(response, matchedCompany);
-        response = applyBondMetadata(response, matchedCompany, query);
+        response = applyBondMetadata(response, matchedCompany, query, mode);
         return NextResponse.json(response);
       }
     }
@@ -243,7 +244,7 @@ export async function POST(request: NextRequest) {
 
       console.info(`Response generated: took_ms=${response.took_ms}, tokens=${usedTokens}`);
       response = await attachEnrichment(response, matchedCompany);
-      response = applyBondMetadata(response, matchedCompany, query);
+      response = applyBondMetadata(response, matchedCompany, query, mode);
       return NextResponse.json(response);
 
     } catch (openaiError: any) {
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
       };
 
       response = await attachEnrichment(response, matchedCompany);
-      response = applyBondMetadata(response, matchedCompany, query);
+      response = applyBondMetadata(response, matchedCompany, query, mode);
       return NextResponse.json(response);
     }
 
@@ -325,17 +326,27 @@ async function attachEnrichment(response: ApiResponse, companyDoc?: any) {
 function applyBondMetadata(
   response: ApiResponse,
   companyDoc: any | undefined | null,
-  query: string
+  query: string,
+  mode: 'company' | 'person' = 'company'
 ): ApiResponse {
   if (!companyDoc) {
+    // DBに企業/人物データがない場合でも、クエリからslugを生成してリンクを作成
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const generatedSlug = query.toLowerCase().replace(/\s+/g, '-');
+    const pathPrefix = mode === 'person' ? 'person' : 'company';
+    const bondPageUrl = `${appUrl}/${pathPrefix}/${encodeURIComponent(generatedSlug)}`;
+
     return {
       ...response,
-      companyName: query
+      companyName: query,
+      companySlug: generatedSlug,
+      bondPageUrl
     };
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const bondPageUrl = `${appUrl}/company/${encodeURIComponent(companyDoc.slug)}`;
+  const pathPrefix = mode === 'person' ? 'person' : 'company';
+  const bondPageUrl = `${appUrl}/${pathPrefix}/${encodeURIComponent(companyDoc.slug)}`;
 
   return {
     ...response,

@@ -197,6 +197,7 @@ export default function BondSearchPage() {
             query: userQuery,
             company: data.companyName || userQuery,
             answer: data.answer,
+            searchType: mode, // 'company' or 'person' を送信
             metadata: {
               mode,
               sources: data.sources || [],
@@ -725,8 +726,8 @@ export default function BondSearchPage() {
         {/* Input Form - 下部固定（ChatGPT風） */}
         <div className="flex-shrink-0 border-t border-border/30 bg-background/90 backdrop-blur-sm p-4">
           <div className="max-w-4xl mx-auto space-y-3">
-            {/* 絞り込みフィルター（企業検索モードの場合のみ表示） */}
-            {mode === 'company' && (
+            {/* 絞り込みフィルター（企業検索・人物検索モードで表示） */}
+            {mode !== null && (
               <div className="space-y-2">
                 <button
                   type="button"
@@ -762,7 +763,7 @@ export default function BondSearchPage() {
                           )}
                         </div>
                         <p className={`text-xs ${showFilters ? 'text-white/80' : 'text-pink-500 dark:text-pink-400'}`}>
-                          業界・地域で検索精度UP
+                          {mode === 'company' ? '業界・地域で検索精度UP' : '所属・専門分野で検索精度UP'}
                         </p>
                       </div>
                     </div>
@@ -779,13 +780,13 @@ export default function BondSearchPage() {
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-xs font-medium text-pink-600 dark:text-pink-400">
                         <Tag className="w-3.5 h-3.5" />
-                        カテゴリ/業界
+                        {mode === 'company' ? 'カテゴリ/業界' : '所属/専門分野'}
                       </label>
                       <input
                         type="text"
                         value={categoryKeyword}
                         onChange={(e) => setCategoryKeyword(e.target.value)}
-                        placeholder="例: 医療系スタートアップ, SaaS, ヘルスケア"
+                        placeholder={mode === 'company' ? '例: 医療系スタートアップ, SaaS, ヘルスケア' : '例: Google, AI研究者, 投資家, 起業家'}
                         className="w-full h-10 px-3 text-sm rounded-lg border border-pink-200/60 dark:border-pink-800/40 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-400/40 focus:border-pink-400"
                         disabled={loading}
                       />
@@ -793,13 +794,13 @@ export default function BondSearchPage() {
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-xs font-medium text-pink-600 dark:text-pink-400">
                         <MapPin className="w-3.5 h-3.5" />
-                        地域/市場
+                        {mode === 'company' ? '地域/市場' : '地域/活動拠点'}
                       </label>
                       <input
                         type="text"
                         value={regionKeyword}
                         onChange={(e) => setRegionKeyword(e.target.value)}
-                        placeholder="例: 日本, 米国, 東証グロース"
+                        placeholder={mode === 'company' ? '例: 日本, 米国, 東証グロース' : '例: 日本, シリコンバレー, 東京'}
                         className="w-full h-10 px-3 text-sm rounded-lg border border-pink-200/60 dark:border-pink-800/40 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-400/40 focus:border-pink-400"
                         disabled={loading}
                       />

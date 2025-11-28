@@ -87,32 +87,9 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
       const fullCompanyName = company?.name || r.companyName || r._id || "Unknown";
       const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
 
-      // ロゴURLを決定（会社データのlogoUrlを優先）
-      let logoUrl = company?.logoUrl || '/default-company.png';
-
-      // logoUrlがない場合のフォールバック
-      if (!company?.logoUrl) {
-        // ロゴファイル名を生成
-        let logoFileName;
-        if (fullCompanyName.toLowerCase().includes('sopital')) {
-          logoFileName = 'sopital';
-        } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
-          logoFileName = 'hokuto';
-        } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
-          logoFileName = 'chatwork';
-        } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
-          logoFileName = 'hackjpn';
-        } else if (fullCompanyName.toLowerCase().includes('ギグー')) {
-          logoFileName = 'ギグー';
-        } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
-          logoFileName = 'ホーミー';
-        } else if (company?.slug) {
-          logoFileName = company.slug.replace(/^株式会社/, '');
-        } else {
-          logoFileName = r._id?.replace(/^株式会社/, '') || displayName;
-        }
-        logoUrl = `/logos/${logoFileName}.png`;
-      }
+      // ロゴURLはAPIエンドポイント経由で取得（会社ページで設定したロゴを反映）
+      const slug = company?.slug || r._id;
+      const logoUrl = `/api/company-logo/${encodeURIComponent(slug)}`;
 
       return {
         id: displayName, // 表示用の名前
@@ -253,29 +230,9 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
         const fullCompanyName = review.companyName;
         const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
 
-        // ロゴURLを決定（会社データのlogoUrlを優先）
-        let logoUrl = company?.logoUrl || '/default-company.png';
-
-        // logoUrlがない場合のフォールバック
-        if (!company?.logoUrl) {
-          let logoFileName = review._id?.replace(/^株式会社/, '') || displayName;
-          if (fullCompanyName.toLowerCase().includes('ギグー')) {
-            logoFileName = 'ギグー';
-          } else if (fullCompanyName.toLowerCase().includes('sopital')) {
-            logoFileName = 'sopital';
-          } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
-            logoFileName = 'hokuto';
-          } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
-            logoFileName = 'chatwork';
-          } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
-            logoFileName = 'hackjpn';
-          } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
-            logoFileName = 'ホーミー';
-          } else if (company?.slug) {
-            logoFileName = company.slug.replace(/^株式会社/, '');
-          }
-          logoUrl = `/logos/${logoFileName}.png`;
-        }
+        // ロゴURLはAPIエンドポイント経由で取得（会社ページで設定したロゴを反映）
+        const slug = company?.slug || review._id;
+        const logoUrl = `/api/company-logo/${encodeURIComponent(slug)}`;
 
         connectedUsersCompanies.push({
           id: displayName,

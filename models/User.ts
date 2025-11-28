@@ -1,6 +1,15 @@
 import mongoose, { Document, Model, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+export interface IEmailNotificationSettings {
+  enabled: boolean;
+  connection_request: boolean;
+  connection_accepted: boolean;
+  message: boolean;
+  evaluation: boolean;
+  system: boolean;
+}
+
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -17,6 +26,8 @@ export interface IUser extends Document {
   providerId?: string;
   evaluationCount: number;
   onboardingCompleted: boolean;
+  trustmapOgImageUrl?: string; // トラストマップOGP画像URL
+  emailNotifications?: IEmailNotificationSettings; // メール通知設定
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -114,6 +125,28 @@ const UserSchema: Schema<IUser> = new Schema({
   onboardingCompleted: {
     type: Boolean,
     default: false
+  },
+  trustmapOgImageUrl: {
+    type: String,
+    trim: true
+  },
+  emailNotifications: {
+    type: {
+      enabled: { type: Boolean, default: true },
+      connection_request: { type: Boolean, default: true },
+      connection_accepted: { type: Boolean, default: true },
+      message: { type: Boolean, default: true },
+      evaluation: { type: Boolean, default: true },
+      system: { type: Boolean, default: true }
+    },
+    default: {
+      enabled: true,
+      connection_request: true,
+      connection_accepted: true,
+      message: true,
+      evaluation: true,
+      system: true
+    }
   }
 }, {
   timestamps: true

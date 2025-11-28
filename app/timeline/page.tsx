@@ -85,7 +85,7 @@ export default function TimelinePage() {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`w-4 h-4 ${
+            className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
               star <= count ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
             }`}
           />
@@ -103,30 +103,30 @@ export default function TimelinePage() {
     <LockedFeature featureName="タイムライン">
     {loading ? (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
           <div className="max-w-3xl mx-auto">
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-gray-600">読み込み中...</p>
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-gray-600 text-sm sm:text-base">読み込み中...</p>
             </div>
           </div>
         </div>
       </div>
     ) : (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto space-y-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="max-w-3xl mx-auto space-y-3 sm:space-y-6">
           {/* ヘッダー */}
-          <Card className="border-2 border-primary/20 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <Clock className="w-6 h-6 text-primary" />
+          <Card className="border-2 border-primary/20 shadow-lg overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 px-3 sm:px-6 py-3 sm:py-4">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-2xl">
+                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                 タイムライン
               </CardTitle>
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2">
                 コミュニティの最新評価をチェック
                 {evaluations.length > 0 && (
-                  <span className="ml-2">
+                  <span className="ml-1 sm:ml-2">
                     ({filteredEvaluations.length} / {evaluations.length}件)
                   </span>
                 )}
@@ -136,9 +136,9 @@ export default function TimelinePage() {
 
           {/* フィルターボタン */}
           {evaluations.length > 0 && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-wrap gap-2">
+            <Card className="overflow-hidden">
+              <CardContent className="p-2 sm:p-4">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   <button
                     onClick={() => setRelationshipFilter('all')}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
@@ -216,77 +216,75 @@ export default function TimelinePage() {
 
           {/* 評価一覧 */}
           {filteredEvaluations.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-gray-500">まだ評価がありません</p>
+            <Card className="overflow-hidden">
+              <CardContent className="py-8 sm:py-12 text-center">
+                <p className="text-gray-500 text-sm sm:text-base">まだ評価がありません</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {filteredEvaluations.map((evaluation) => (
-                <Card key={evaluation.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex gap-4">
+                <Card key={evaluation.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+                  <CardContent className="p-3 sm:p-4">
+                    {/* ヘッダー: アバター・名前・バッジ・会社・星・日付 */}
+                    <div className="flex items-center gap-2 mb-2">
                       {/* アバター */}
                       <div className="flex-shrink-0">
                         {!evaluation.isAnonymous && evaluation.userImage ? (
                           <img
                             src={evaluation.userImage}
                             alt={evaluation.userName}
-                            className="w-12 h-12 rounded-full object-cover"
+                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = '/avatar5.png';
                             }}
                           />
                         ) : (
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                            <User className="w-6 h-6 text-gray-500" />
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                            <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
                           </div>
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        {/* Header */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="font-medium text-gray-900">
-                            {evaluation.isAnonymous ? '匿名ユーザー' : (evaluation.userName || 'Anonymous User')}
-                          </span>
-                          <Badge variant="outline">
-                            {evaluation.relationshipLabel}
-                          </Badge>
-                          <span className="text-gray-600 text-sm">が</span>
-                          <Link
-                            href={`/company/${encodeURIComponent(evaluation.company)}`}
-                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md text-sm font-medium transition-colors"
-                          >
-                            <img
-                              src={getCompanyLogoPath(evaluation.company)}
-                              alt={evaluation.company}
-                              className="w-4 h-4 rounded object-contain flex-shrink-0"
-                              onError={(e) => {
-                                e.currentTarget.src = '/bond-logo.png';
-                                e.currentTarget.onerror = null;
-                              }}
-                            />
-                            {evaluation.company}
-                          </Link>
-                          <span className="text-gray-600 text-sm">を評価</span>
-                        </div>
-
-                        {/* 評価と星 */}
-                        <div className="flex items-center gap-3 mb-3">
-                          {renderStars(evaluation.rating)}
-                          <span className="text-xs text-gray-500">
-                            {formatTimestamp(evaluation.timestamp)}
-                          </span>
-                        </div>
-
-                        {/* コメント */}
-                        <p className="text-sm text-gray-700 leading-relaxed">
-                          {evaluation.comment}
-                        </p>
+                      {/* ユーザー情報 */}
+                      <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                        <span className="font-medium text-gray-900 text-sm">
+                          {evaluation.isAnonymous ? '匿名ユーザー' : (evaluation.userName || 'Anonymous User')}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {evaluation.relationshipLabel}
+                        </Badge>
+                        {renderStars(evaluation.rating)}
+                        <span className="text-gray-500 text-xs ml-auto">
+                          {formatTimestamp(evaluation.timestamp)}
+                        </span>
                       </div>
                     </div>
+
+                    {/* 会社リンク */}
+                    <div className="mb-2">
+                      <Link
+                        href={`/company/${encodeURIComponent(evaluation.company)}`}
+                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md text-sm font-medium transition-colors"
+                      >
+                        <img
+                          src={getCompanyLogoPath(evaluation.company)}
+                          alt={evaluation.company}
+                          className="w-4 h-4 rounded object-contain flex-shrink-0"
+                          onError={(e) => {
+                            e.currentTarget.src = '/bond-logo.png';
+                            e.currentTarget.onerror = null;
+                          }}
+                        />
+                        {evaluation.company}
+                      </Link>
+                      <span className="text-gray-600 text-sm ml-1">を評価</span>
+                    </div>
+
+                    {/* コメント: 横幅いっぱい、改行反映 */}
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                      {evaluation.comment}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -295,11 +293,11 @@ export default function TimelinePage() {
 
           {/* Load More */}
           {evaluations.length >= 20 && (
-            <Card className="border-2 border-dashed border-gray-300">
-              <CardContent className="py-8 text-center">
+            <Card className="border-2 border-dashed border-gray-300 overflow-hidden">
+              <CardContent className="py-6 sm:py-8 text-center">
                 <Link
                   href="/timeline?limit=50"
-                  className="text-primary hover:text-primary/80 font-medium"
+                  className="text-primary hover:text-primary/80 font-medium text-sm sm:text-base"
                 >
                   さらに読み込む
                 </Link>

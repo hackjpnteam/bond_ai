@@ -76,28 +76,18 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
   // 会社ノード
   for (const e of edgesAgg) {
     const c = companyMap[e._id];
-    if (!c) {
-      // 会社データがない場合は、評価データから作成
-      const size = Math.min(42, 14 + (e.count || 1) * 4);
-      nodes.push({
-        id: `c:${e._id}`,
-        type: "company",
-        label: e.companyName || e._id,
-        img: undefined,
-        size,
-        slug: e._id,
-        meta: { avgScore: Number(e.avgScore?.toFixed(2) ?? 0), count: e.count },
-      });
-      continue;
-    }
-    const size = Math.min(42, 14 + (e.count || 1) * 4); // レビュー件数で拡大
+    const slug = c?.slug || e._id;
+    const size = Math.min(42, 14 + (e.count || 1) * 4);
+    // ロゴはAPIエンドポイント経由で取得（会社ページで設定したロゴを反映）
+    const logoUrl = `/api/company-logo/${encodeURIComponent(slug)}`;
+
     nodes.push({
-      id: `c:${c.slug}`,
+      id: `c:${slug}`,
       type: "company",
-      label: c.name,
-      img: c.logoUrl,
+      label: c?.name || e.companyName || e._id,
+      img: logoUrl,
       size,
-      slug: c.slug,
+      slug: slug,
       meta: { avgScore: Number(e.avgScore?.toFixed(2) ?? 0), count: e.count },
     });
   }

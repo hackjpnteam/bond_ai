@@ -1161,10 +1161,11 @@ URL: ${window.location.href}`;
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
         {/* ヘッダー */}
         <div className="bg-white border-b border-border">
-          <div className="container max-w-screen-xl mx-auto px-4 md:px-6 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden relative group cursor-pointer"
+          <div className="container max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+            {/* スマホ: 縦並び、PC: 横並び */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden relative group cursor-pointer"
                      onClick={() => document.getElementById('logo-upload')?.click()}>
                   <img
                     src={`/api/company-logo/${encodeURIComponent(companyData.slug || companyName.toLowerCase())}`}
@@ -1190,60 +1191,52 @@ URL: ${window.location.href}`;
                   className="hidden"
                   onChange={handleLogoUpload}
                 />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">{companyData.name}</h1>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-gray-600">{companyData.industry}</p>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground truncate">{companyData.name}</h1>
+                  <p className="text-sm sm:text-base text-gray-600 truncate">{companyData.industry}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 {!isEditing && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setIsEditing(true)}
-                    className="text-bond-pink border-bond-pink hover:bg-bond-pink hover:text-white"
+                    className="text-bond-pink border-bond-pink hover:bg-bond-pink hover:text-white px-2 sm:px-3"
                   >
-                    <Edit3 className="w-4 h-4 mr-1" />
-                    編集
+                    <Edit3 className="w-4 h-4" />
+                    <span className="hidden sm:inline ml-1">編集</span>
                   </Button>
                 )}
-                <Button variant="outline" size="sm" onClick={handleShare}>
-                  <Share2 className="w-4 h-4 mr-1" />
-                  シェア
+                <Button variant="outline" size="sm" onClick={handleShare} className="px-2 sm:px-3">
+                  <Share2 className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-1">シェア</span>
                 </Button>
                 <Button
                   variant={isSaved ? "default" : "outline"}
                   size="sm"
                   onClick={handleSave}
+                  className="px-2 sm:px-3"
                 >
-                  <BookmarkPlus className="w-4 h-4 mr-1" />
-                  {isSaved ? '保存済み' : '保存'}
+                  <BookmarkPlus className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-1">{isSaved ? '保存済み' : '保存'}</span>
                 </Button>
                 <Button
                   variant={isCopied ? "default" : "outline"}
                   size="sm"
                   onClick={handleCopyReport}
-                  className={isCopied ? "bg-green-500 hover:bg-green-600" : ""}
+                  className={`px-2 sm:px-3 ${isCopied ? "bg-green-500 hover:bg-green-600" : ""}`}
                 >
                   {isCopied ? (
-                    <>
-                      <Check className="w-4 h-4 mr-1" />
-                      コピー済み
-                    </>
+                    <Check className="w-4 h-4" />
                   ) : (
-                    <>
-                      <Copy className="w-4 h-4 mr-1" />
-                      コピー
-                    </>
+                    <Copy className="w-4 h-4" />
                   )}
+                  <span className="hidden sm:inline ml-1">{isCopied ? 'コピー済み' : 'コピー'}</span>
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleExportPDF}>
-                  <FileDown className="w-4 h-4 mr-1" />
-                  PDF
+                <Button variant="outline" size="sm" onClick={handleExportPDF} className="px-2 sm:px-3">
+                  <FileDown className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-1">PDF</span>
                 </Button>
               </div>
             </div>
@@ -1343,13 +1336,13 @@ URL: ${window.location.href}`;
             )}
 
             {/* 評価サマリー */}
-            <div className="mt-6 flex items-center gap-6">
+            <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-6">
               <div className="flex items-center gap-2">
                 {renderStars(Math.round(companyData.averageRating))}
-                <span className="text-lg font-semibold">{companyData.averageRating.toFixed(1)}</span>
-                <span className="text-gray-600">({companyData.evaluations.length}件の評価)</span>
+                <span className="text-base sm:text-lg font-semibold">{companyData.averageRating.toFixed(1)}</span>
+                <span className="text-sm sm:text-base text-gray-600">({companyData.evaluations.length}件)</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600">
                 <TrendingUp className="w-4 h-4" />
                 <span>{companyData.searchCount}回検索</span>
               </div>
@@ -1357,29 +1350,27 @@ URL: ${window.location.href}`;
           </div>
         </div>
 
-        <div className="container max-w-screen-xl mx-auto px-4 md:px-6 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="container max-w-screen-xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
             {/* メインコンテンツ */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               {/* 会社概要 - Wiki風編集機能付き */}
-              <Card>
-                <CardHeader>
+              <Card className="overflow-hidden">
+                <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
                   <div className="flex items-center justify-between">
-                    <CardTitle>会社概要</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowHistory(!showHistory)}
-                        className="text-xs"
-                      >
-                        <History className="w-3 h-3 mr-1" />
-                        履歴
-                      </Button>
-                    </div>
+                    <CardTitle className="text-base sm:text-lg">会社概要</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowHistory(!showHistory)}
+                      className="text-xs px-2 sm:px-3"
+                    >
+                      <History className="w-3 h-3" />
+                      <span className="hidden sm:inline ml-1">履歴</span>
+                    </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
                   {/* 整形された会社概要 */}
                   <CompanyOverview
                     overview={companyData.description}
@@ -1450,20 +1441,20 @@ URL: ${window.location.href}`;
 
               {/* 参考サイト */}
               {companyData.sources && companyData.sources.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Search className="w-5 h-5" />
+                <Card className="overflow-hidden">
+                  <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                      <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                       参考サイト
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs sm:text-sm">
                       この企業情報の作成時に参照したウェブサイト
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
+                  <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
+                    <div className="space-y-2 sm:space-y-3">
                       {companyData.sources.slice(0, 10).map((source, index) => (
-                        <div key={index} className="border border-border rounded-lg p-3 hover:bg-muted/50 transition-colors">
+                        <div key={index} className="border border-border rounded-lg p-2 sm:p-3 hover:bg-muted/50 transition-colors">
                           <a
                             href={source.url}
                             target="_blank"
@@ -1473,7 +1464,7 @@ URL: ${window.location.href}`;
                             <div className="flex items-start gap-2">
                               <ExternalLink className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-primary hover:underline truncate">
+                                <p className="text-xs sm:text-sm font-medium text-primary hover:underline truncate">
                                   {source.title || (() => { try { return new URL(source.url).hostname; } catch { return source.url; } })()}
                                 </p>
                                 <p className="text-xs text-gray-600 truncate mt-0.5">
@@ -1491,7 +1482,7 @@ URL: ${window.location.href}`;
                       ))}
                     </div>
                     {companyData.sources.length > 10 && (
-                      <p className="text-sm text-gray-600 mt-3 text-center">
+                      <p className="text-xs sm:text-sm text-gray-600 mt-3 text-center">
                         他 {companyData.sources.length - 10} 件のソース
                       </p>
                     )}
@@ -1500,17 +1491,25 @@ URL: ${window.location.href}`;
               )}
 
               {/* 評価一覧 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>評価・レビュー</CardTitle>
-                  <CardDescription>
+              <Card className="overflow-hidden">
+                <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+                  <CardTitle className="text-base sm:text-lg">評価・レビュー</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
                     関係者による実際の評価をご覧いただけます
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
                   {companyData.evaluations.length > 0 ? (
-                    <div className="space-y-4">
-                      {companyData.evaluations.slice().reverse().map((evaluation) => {
+                    <div className="space-y-3 sm:space-y-4">
+                      {(() => {
+                        const sortedEvaluations = companyData.evaluations.slice().reverse();
+                        const isLoggedIn = !!currentUser?.id;
+                        const displayEvaluations = isLoggedIn ? sortedEvaluations : sortedEvaluations.slice(0, 3);
+                        const hiddenCount = isLoggedIn ? 0 : Math.max(0, sortedEvaluations.length - 3);
+
+                        return (
+                          <>
+                            {displayEvaluations.map((evaluation) => {
                         const displayName = evaluation.isAnonymous
                           ? '匿名ユーザー'
                           : evaluation.userName || getUserDisplayName(evaluation.userId);
@@ -1519,11 +1518,12 @@ URL: ${window.location.href}`;
                         const avatarSrc = evaluation.isAnonymous ? '' : evaluation.userImage || '/avatar5.png';
 
                         return (
-                          <div key={evaluation.id} className="border border-border rounded-lg p-4">
-                            <div className="flex items-start gap-3">
-                              <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
+                          <div key={evaluation.id} className="border border-border rounded-lg p-3 sm:p-4">
+                            {/* ヘッダー部分: アバター・名前・バッジ・星・日付 */}
+                            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden flex-shrink-0">
                                 {evaluation.isAnonymous ? (
-                                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-600 text-lg font-bold">
+                                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs sm:text-sm font-bold">
                                     匿
                                   </div>
                                 ) : (
@@ -1537,39 +1537,51 @@ URL: ${window.location.href}`;
                                   />
                                 )}
                               </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2 text-sm">
-                                  <span className="font-medium">
-                                    {displayName}
-                                  </span>
-                                  <Badge variant="outline">
-                                    {relationshipLabel}
-                                  </Badge>
-                                  <div className="flex items-center gap-1">
-                                    {renderStars(evaluation.rating)}
-                                  </div>
-                                  <span className="text-gray-600 text-xs ml-auto">
-                                    {new Date(evaluation.timestamp).toLocaleDateString('ja-JP')}
-                                  </span>
+                              <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                <span className="font-medium text-sm sm:text-base">
+                                  {displayName}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {relationshipLabel}
+                                </Badge>
+                                <div className="flex items-center gap-0.5">
+                                  {renderStars(evaluation.rating)}
                                 </div>
-                                <p className="text-gray-700 leading-relaxed">
-                                  "{evaluation.comment}"
-                                </p>
-                                {/* 自分の評価の場合は編集ボタンを表示 */}
-                                {currentUser?.id === evaluation.userId && (
-                                  <button
-                                    onClick={() => handleEditEvaluation(evaluation)}
-                                    className="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                                  >
-                                    <Pencil className="w-3 h-3" />
-                                    編集
-                                  </button>
-                                )}
+                                <span className="text-gray-500 text-xs ml-auto">
+                                  {new Date(evaluation.timestamp).toLocaleDateString('ja-JP')}
+                                </span>
                               </div>
                             </div>
+                            {/* コメント部分: 横幅いっぱい、改行反映 */}
+                            <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                              {evaluation.comment}
+                            </p>
+                            {/* 自分の評価の場合は編集ボタンを表示 */}
+                            {currentUser?.id === evaluation.userId && (
+                              <button
+                                onClick={() => handleEditEvaluation(evaluation)}
+                                className="mt-2 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                編集
+                              </button>
+                            )}
                           </div>
                         );
                       })}
+                            {hiddenCount > 0 && (
+                              <div className="border border-dashed border-border rounded-lg p-6 text-center bg-muted/30">
+                                <p className="text-gray-600 mb-3">
+                                  他 {hiddenCount} 件の評価があります
+                                </p>
+                                <Link href="/login" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                                  ログインしてすべての評価を見る
+                                </Link>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div className="border border-dashed border-border rounded-lg p-6 text-center space-y-3">
@@ -1594,13 +1606,13 @@ URL: ${window.location.href}`;
             </div>
 
             {/* サイドバー */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* 評価投稿フォーム */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">評価を投稿</CardTitle>
+              <Card className="overflow-hidden">
+                <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+                  <CardTitle className="text-base sm:text-lg">評価を投稿</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
                   {hasUserEvaluated ? (
                     <p className="text-gray-700 text-center py-4">
                       この会社については既に評価済みです
@@ -1713,14 +1725,14 @@ URL: ${window.location.href}`;
 
               {/* よく調べられている関連企業 */}
               {relatedCompanies.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">よく調べられている関連企業</CardTitle>
-                    <CardDescription>
+                <Card className="overflow-hidden">
+                  <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+                    <CardTitle className="text-base sm:text-lg">よく調べられている関連企業</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
                       同業界・人気の企業
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="px-3 sm:px-6 py-3 sm:py-4 space-y-2 sm:space-y-3">
                     {relatedCompanies.map((company) => (
                       <Link
                         key={company.slug}

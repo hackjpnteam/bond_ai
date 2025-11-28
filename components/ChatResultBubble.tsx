@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Star, Building2, BookmarkPlus, Copy, Check } from 'lucide-react';
+import { Star, Building2, User, BookmarkPlus, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiResponse } from '@/types/bond';
@@ -29,7 +29,7 @@ interface CompanyEvaluations {
 
 interface ChatResultBubbleProps {
   result: ApiResponse;
-  mode: 'company' | 'person';
+  mode: 'company' | 'person' | null;
   company: string;
 }
 
@@ -475,19 +475,25 @@ export function ChatResultBubble({ result, mode, company }: ChatResultBubbleProp
         <div className="bg-gradient-to-r from-[#ff7a18] via-[#ff5f4a] to-[#ff3d81] p-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden">
-              <img
-                src={`/api/company-logo/${encodeURIComponent(company.toLowerCase())}`}
-                alt={`${company} ロゴ`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = 'flex';
-                }}
-              />
-              <div className="w-full h-full items-center justify-center hidden">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
+              {mode === 'person' ? (
+                <User className="w-6 h-6 text-white" />
+              ) : (
+                <>
+                  <img
+                    src={`/api/company-logo/${encodeURIComponent(company.toLowerCase())}`}
+                    alt={`${company} ロゴ`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                  <div className="w-full h-full items-center justify-center hidden">
+                    <Building2 className="w-6 h-6 text-white" />
+                  </div>
+                </>
+              )}
             </div>
             <div className="flex-1">
               <h2 className="text-lg font-bold text-white">{company}</h2>

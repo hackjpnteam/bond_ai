@@ -5,6 +5,7 @@ import ConnectionRequest from '@/models/ConnectionRequest'
 import Connection from '@/models/Connection'
 import User from '@/models/User'
 import Notification from '@/models/Notification'
+import { createNotificationWithEmail } from '@/lib/email-notifications'
 
 type ConnectionStatus = 'pending' | 'accepted' | 'declined' | 'blocked'
 
@@ -173,7 +174,7 @@ export const PATCH = requireAuth(async (request: NextRequest, authUser) => {
         $addToSet: { connections: connectionRequest.requester._id }
       })
 
-      await Notification.create({
+      await createNotificationWithEmail(Notification, User, {
         recipient: connectionRequest.requester._id,
         type: 'connection_accepted',
         title: '接続リクエストが承認されました',

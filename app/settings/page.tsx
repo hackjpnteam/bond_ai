@@ -12,11 +12,29 @@ import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth'
 import ProfileImageUpload from '@/components/ProfileImageUpload'
 
+interface EmailNotificationSettings {
+  enabled: boolean
+  connection_request: boolean
+  connection_accepted: boolean
+  message: boolean
+  evaluation: boolean
+  system: boolean
+}
+
 export default function SettingsPage() {
   const { user } = useAuth()
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(false)
   const [marketingEmails, setMarketingEmails] = useState(false)
+  const [emailSettings, setEmailSettings] = useState<EmailNotificationSettings>({
+    enabled: true,
+    connection_request: true,
+    connection_accepted: true,
+    message: true,
+    evaluation: true,
+    system: true
+  })
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [profileVisibility, setProfileVisibility] = useState('public')
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [language, setLanguage] = useState('ja')
@@ -46,13 +64,15 @@ export default function SettingsPage() {
       setEmail(user.email || '')
       setCompany(user.company || '')
       // Set position based on role
-      setPosition(user.role === 'founder' ? 'Founder' : 
-                 user.role === 'investor' ? 'Investor' : 
-                 user.role === 'employee' ? 'Employee' : 
+      setPosition(user.role === 'founder' ? 'Founder' :
+                 user.role === 'investor' ? 'Investor' :
+                 user.role === 'employee' ? 'Employee' :
                  user.role === 'advisor' ? 'Advisor' : 'Other')
-      
+
       // Load profile data including image
       loadProfileData()
+      // Load notification settings
+      loadNotificationSettings()
     } else {
       // デフォルトユーザー（認証されていない場合）
       setName('hackjpn')
@@ -199,8 +219,55 @@ export default function SettingsPage() {
     toast.success('プロフィール画像を更新しました')
   }
 
-  const handleSaveNotifications = () => {
-    toast.success('通知設定を保存しました')
+  const loadNotificationSettings = async () => {
+    try {
+      const response = await fetch('/api/settings/notifications', {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.settings) {
+          setEmailSettings(data.settings)
+          setEmailNotifications(data.settings.enabled)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load notification settings:', error)
+    }
+  }
+
+  const handleSaveNotifications = async () => {
+    setNotificationsLoading(true)
+    try {
+      const response = await fetch('/api/settings/notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          settings: {
+            ...emailSettings,
+            enabled: emailNotifications
+          }
+        })
+      })
+
+      if (response.ok) {
+        toast.success('通知設定を保存しました')
+      } else {
+        toast.error('設定の保存に失敗しました')
+      }
+    } catch (error) {
+      console.error('Failed to save notification settings:', error)
+      toast.error('設定の保存中にエラーが発生しました')
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
+  const handleEmailSettingChange = (key: keyof EmailNotificationSettings, value: boolean) => {
+    setEmailSettings(prev => ({ ...prev, [key]: value }))
   }
 
   const handleSavePrivacy = () => {
@@ -447,64 +514,104 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">メール通知</p>
-                    <p className="text-sm text-gray-500">重要な更新をメールで受け取る</p>
+                    <p className="font-medium">メール通知を有効にする</p>
+                    <p className="text-sm text-gray-500">通知をメールで受け取る</p>
                   </div>
-                  <input 
+                  <input
                     type="checkbox"
                     checked={emailNotifications}
                     onChange={(e) => setEmailNotifications(e.target.checked)}
                     className="h-4 w-4"
                   />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">プッシュ通知</p>
-                    <p className="text-sm text-gray-500">ブラウザのプッシュ通知を有効にする</p>
+
+                {emailNotifications && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-3">メール通知を受け取るイベント</h4>
+                    <div className="space-y-3">
+                      <label className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">接続リクエスト</p>
+                          <p className="text-xs text-gray-500">新しい接続リクエストが届いたとき</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={emailSettings.connection_request}
+                          onChange={(e) => handleEmailSettingChange('connection_request', e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">接続承認</p>
+                          <p className="text-xs text-gray-500">接続リクエストが承認されたとき</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={emailSettings.connection_accepted}
+                          onChange={(e) => handleEmailSettingChange('connection_accepted', e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">メッセージ</p>
+                          <p className="text-xs text-gray-500">新しいメッセージが届いたとき</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={emailSettings.message}
+                          onChange={(e) => handleEmailSettingChange('message', e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">評価</p>
+                          <p className="text-xs text-gray-500">新しい評価が投稿されたとき</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={emailSettings.evaluation}
+                          onChange={(e) => handleEmailSettingChange('evaluation', e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">システム通知</p>
+                          <p className="text-xs text-gray-500">重要なシステムからのお知らせ</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={emailSettings.system}
+                          onChange={(e) => handleEmailSettingChange('system', e.target.checked)}
+                          className="h-4 w-4"
+                        />
+                      </label>
+                    </div>
                   </div>
-                  <input 
-                    type="checkbox"
-                    checked={pushNotifications}
-                    onChange={(e) => setPushNotifications(e.target.checked)}
-                    className="h-4 w-4"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">マーケティングメール</p>
-                    <p className="text-sm text-gray-500">新機能やプロモーションの情報を受け取る</p>
-                  </div>
-                  <input 
-                    type="checkbox"
-                    checked={marketingEmails}
-                    onChange={(e) => setMarketingEmails(e.target.checked)}
-                    className="h-4 w-4"
-                  />
-                </div>
+                )}
+
                 <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">通知を受け取るイベント</h4>
-                  <div className="space-y-3">
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      新しいレビューが投稿されたとき
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      評価した企業に更新があったとき
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
-                      フォローされたとき
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" defaultChecked className="mr-2" />
-                      バッジを獲得したとき
-                    </label>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">プッシュ通知</p>
+                      <p className="text-sm text-gray-500">ブラウザのプッシュ通知を有効にする（準備中）</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={pushNotifications}
+                      onChange={(e) => setPushNotifications(e.target.checked)}
+                      className="h-4 w-4"
+                      disabled
+                    />
                   </div>
                 </div>
-                <Button onClick={handleSaveNotifications} className="w-full">
+
+                <Button onClick={handleSaveNotifications} className="w-full" disabled={notificationsLoading}>
                   <Save className="w-4 h-4 mr-2" />
-                  保存
+                  {notificationsLoading ? '保存中...' : '保存'}
                 </Button>
               </CardContent>
             </Card>

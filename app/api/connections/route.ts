@@ -5,6 +5,7 @@ import ConnectionRequest from '@/models/ConnectionRequest'
 import Connection from '@/models/Connection'
 import User from '@/models/User'
 import Notification from '@/models/Notification'
+import { createNotificationWithEmail } from '@/lib/email-notifications'
 import type { FilterQuery } from 'mongoose'
 
 type ConnectionStatus = 'pending' | 'accepted' | 'declined' | 'blocked'
@@ -218,7 +219,7 @@ export const POST = requireAuth(async (request: NextRequest, authUser) => {
       status: 'pending'
     })
 
-    await Notification.create({
+    await createNotificationWithEmail(Notification, User, {
       recipient: toUserId,
       type: 'connection_request',
       title: '新しい接続リクエスト',

@@ -32,13 +32,15 @@ interface BondHeartGraphProps {
   width?: number;
   height?: number;
   centerMode?: 'logo' | 'avatar';
+  nodeScale?: number; // ノードサイズの倍率（デフォルト1）
 }
 
-const BondHeartGraph: React.FC<BondHeartGraphProps> = ({ 
-  data, 
-  width = 800, 
+const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
+  data,
+  width = 800,
   height = 600,
-  centerMode = 'logo'
+  centerMode = 'logo',
+  nodeScale = 1
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<{
@@ -62,14 +64,14 @@ const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
   const sizeScale = (node: Node) => {
     const safeCount = Number(node.reviewCount) || 0; // undefinedやNaNの場合は0を使用
     const baseSize = 0.8 + 0.2 * Math.sqrt(Math.max(0, safeCount));
-    
+
     // 人物ノード：大きく表示（1.8倍）
     if (node.type === 'person') {
-      return baseSize * 1.8;
+      return baseSize * 1.8 * nodeScale;
     }
     // 企業ノード：小さく表示（1.0倍）
     else {
-      return baseSize * 1.0;
+      return baseSize * 1.0 * nodeScale;
     }
   };
 
@@ -494,7 +496,7 @@ const BondHeartGraph: React.FC<BondHeartGraphProps> = ({
     return () => {
       simulation.stop();
     };
-  }, [data, width, height]);
+  }, [data, width, height, nodeScale]);
 
   // レビュー件数の凡例
   const legendData = [

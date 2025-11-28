@@ -81,31 +81,9 @@ export async function GET(
         const fullCompanyName = company?.name || r.companyName || r._id || "Unknown";
         const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
 
-        // ロゴURLを決定（会社データのlogoUrlを優先）
-        let logoUrl = company?.logoUrl || '/default-company.png';
-
-        // logoUrlがない場合のフォールバック
-        if (!company?.logoUrl) {
-          let logoFileName;
-          if (fullCompanyName.toLowerCase().includes('sopital')) {
-            logoFileName = 'sopital';
-          } else if (fullCompanyName.toLowerCase().includes('hokuto')) {
-            logoFileName = 'hokuto';
-          } else if (fullCompanyName.toLowerCase().includes('chatwork')) {
-            logoFileName = 'chatwork';
-          } else if (fullCompanyName.toLowerCase().includes('hackjpn')) {
-            logoFileName = 'hackjpn';
-          } else if (fullCompanyName.toLowerCase().includes('ギグー')) {
-            logoFileName = 'ギグー';
-          } else if (fullCompanyName.toLowerCase().includes('ホーミー')) {
-            logoFileName = 'ホーミー';
-          } else if (company?.slug) {
-            logoFileName = company.slug.replace(/^株式会社/, '');
-          } else {
-            logoFileName = r._id?.replace(/^株式会社/, '') || displayName;
-          }
-          logoUrl = `/logos/${logoFileName}.png`;
-        }
+        // ロゴURLはAPIエンドポイント経由で取得（会社ページで設定したロゴを反映）
+        const slug = company?.slug || r._id;
+        const logoUrl = `/api/company-logo/${encodeURIComponent(slug)}`;
 
         return {
           id: displayName,
@@ -147,6 +125,8 @@ export async function GET(
       },
       companies: uniqueCompanies,
       users: connectedUsers,
+      // OGP画像URL（アップロード済みの場合）
+      trustmapOgImageUrl: (user as any).trustmapOgImageUrl || null,
     };
 
     console.log('[Share API] Response:', {

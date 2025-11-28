@@ -174,41 +174,46 @@ export default function TrustMapPage() {
   }, [data, showCompanies, relationshipFilter]);
 
   return (
+    <div className="min-h-screen bg-bond-cream">
     <LockedFeature featureName="信頼ネットワーク" requiredEvaluations={1}>
       {error ? (
-        <div className="p-6 text-red-600">{error}</div>
+        <div className="p-6 text-red-600">エラー: {error}</div>
       ) : isLoading ? (
         <div className="p-6">読み込み中...</div>
       ) : !data ? (
         <div className="p-6 text-gray-600">データがありません</div>
       ) : (
-      <div className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <h1 className="text-xl font-semibold">信頼ネットワーク</h1>
-          <div className="flex flex-wrap gap-2">
+      <div className="p-3 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
+          <h1 className="text-lg sm:text-xl font-semibold">信頼ネットワーク</h1>
+        </div>
+
+        {/* フィルターコントロール */}
+        <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+          {/* 企業表示トグル */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm text-gray-600">企業:</span>
             <button
               onClick={() => setShowCompanies(!showCompanies)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-colors ${
                 showCompanies
-                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              {showCompanies ? '企業を非表示' : '企業を表示'}
+              {showCompanies ? '表示中' : '非表示'}
             </button>
           </div>
-        </div>
 
-        {/* 関係性フィルター */}
-        {showCompanies && (
-          <div className="mb-4">
-            <div className="text-sm text-gray-600 mb-2">関係性でフィルタ:</div>
-            <div className="flex flex-wrap gap-2">
+          {/* 関係性フィルター */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs sm:text-sm text-gray-600">関係性:</span>
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {RELATIONSHIP_FILTERS.map((filter) => (
                 <button
                   key={filter.value}
                   onClick={() => setRelationshipFilter(filter.value as number | 'all')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-colors ${
                     relationshipFilter === filter.value
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -219,7 +224,7 @@ export default function TrustMapPage() {
               ))}
             </div>
           </div>
-        )}
+        </div>
 
         <ShareableTrustMap
           data={graphData}
@@ -231,5 +236,6 @@ export default function TrustMapPage() {
       </div>
       )}
     </LockedFeature>
+    </div>
   );
 }

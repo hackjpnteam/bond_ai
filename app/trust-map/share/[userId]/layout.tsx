@@ -1,7 +1,7 @@
 /**
  * Trust Map シェアページ用レイアウト
  * - 動的にユーザー情報を取得してメタデータを生成
- * - OGP画像は opengraph-image.tsx で自動生成されるため、ここでは images を指定しない
+ * - trustmapOgImageUrl がある場合はそれを使用、なければ opengraph-image.tsx のフォールバック
  */
 import type { Metadata } from 'next'
 
@@ -23,7 +23,7 @@ async function getUserData(userId: string) {
       return null
     }
     const data = await res.json()
-    console.log('[Share Layout] Got user data:', { name: data?.me?.name, companies: data?.companies?.length })
+    console.log('[Share Layout] Got user data:', { name: data?.me?.name, companies: data?.companies?.length, ogImageUrl: data?.trustmapOgImageUrl })
     return data
   } catch (error) {
     console.error('[Share Layout] Fetch error:', error)
@@ -44,11 +44,26 @@ export async function generateMetadata({
   const displayName = userData?.me?.name || userId
   const companyCount = userData?.companies?.length || 0
   const connectionCount = userData?.users?.length || 0
+  const trustmapOgImageUrl = userData?.trustmapOgImageUrl || null
 
   const title = `${displayName}さんの信頼ネットワーク | Bond`
   const description = `${displayName}さんの信頼でつながるネットワーク。${companyCount}社の企業、${connectionCount}人のつながりをBondで可視化。`
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://bond.giving'
   const url = `${baseUrl}/trust-map/share/${userId}`
+
+  // OGP画像の設定
+  // trustmapOgImageUrl がある場合はそれを使用し、opengraph-image.tsx より優先
+  // ない場合は opengraph-image.tsx が自動的にフォールバックとして使われる
+  const ogImages = trustmapOgImageUrl
+    ? [
+        {
+          url: trustmapOgImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${displayName}さんの信頼マップ`,
+        },
+      ]
+    : undefined
 
   return {
     title,
@@ -60,13 +75,16 @@ export async function generateMetadata({
       type: 'website',
       siteName: 'Bond',
       locale: 'ja_JP',
-      // images は opengraph-image.tsx が自動的に紐づくため指定しない
+      // trustmapOgImageUrl がある場合のみ images を指定
+      // 指定しない場合は opengraph-image.tsx が自動的に紐づく
+      ...(ogImages && { images: ogImages }),
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      // images は opengraph-image.tsx / twitter-image.tsx が自動的に紐づくため指定しない
+      // trustmapOgImageUrl がある場合のみ images を指定
+      ...(ogImages && { images: ogImages }),
     },
     // Facebook用の追加メタタグ
     other: {

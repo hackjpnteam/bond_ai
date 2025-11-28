@@ -249,11 +249,19 @@ export default function ListsPage() {
     }
   };
 
-  const filteredItems = savedItems.filter(item => {
+  const filteredSavedItems = savedItems.filter(item => {
     const matchesType = filter === 'all' || item.itemType === filter;
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       item.itemData.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.itemData.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesType && matchesSearch;
+  });
+
+  const filteredRatedItems = ratedItems.filter(item => {
+    const matchesType = filter === 'all' || item.type === filter;
+    const matchesSearch = searchQuery === '' ||
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.comment?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesType && matchesSearch;
   });
 
@@ -405,25 +413,31 @@ export default function ListsPage() {
           {/* Content */}
           {activeTab === 'rated' ? (
             // 評価済みリスト
-            ratedItems.length === 0 ? (
+            filteredRatedItems.length === 0 ? (
               <div className="text-center py-12">
                 <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  まだ評価していません
+                  {searchQuery || filter !== 'all'
+                    ? '該当する評価が見つかりません'
+                    : 'まだ評価していません'}
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  企業や人物を評価すると、ここに表示されます
+                  {searchQuery || filter !== 'all'
+                    ? '検索条件を変更してみてください'
+                    : '企業や人物を評価すると、ここに表示されます'}
                 </p>
-                <Link href="/search">
-                  <Button>
-                    <Search className="w-4 h-4 mr-2" />
-                    企業を探す
-                  </Button>
-                </Link>
+                {!searchQuery && filter === 'all' && (
+                  <Link href="/search">
+                    <Button>
+                      <Search className="w-4 h-4 mr-2" />
+                      企業を探す
+                    </Button>
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {ratedItems.map((item) => (
+                {filteredRatedItems.map((item) => (
                   <Card key={item.id} className="hover:shadow-lg transition-all duration-300 overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -490,7 +504,7 @@ export default function ListsPage() {
             )
           ) : (
             // 保存済みリスト
-            filteredItems.length === 0 ? (
+            filteredSavedItems.length === 0 ? (
               <div className="text-center py-12">
                 <BookmarkPlus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -514,7 +528,7 @@ export default function ListsPage() {
               </div>
             ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredItems.map((item) => (
+              {filteredSavedItems.map((item) => (
                 <Card key={item.id} className="hover:shadow-lg transition-all duration-300 overflow-hidden">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">

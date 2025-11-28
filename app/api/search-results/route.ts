@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth-middleware';
 import connectDB from '@/lib/mongodb';
 import SearchResult from '@/models/SearchResult';
 import Company from '@/models/Company';
+import Person from '@/models/Person';
 
 // GET /api/search-results - 検索結果を取得
 export const GET = requireAuth(async (request: NextRequest, user) => {
@@ -59,11 +60,14 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
 export const POST = requireAuth(async (request: NextRequest, user) => {
   try {
     await connectDB();
-    
+
     const body = await request.json();
-    const { query, company, answer, metadata } = body;
-    
-    if (!query || !company || !answer) {
+    const { query, company, answer, metadata, searchType } = body;
+    // searchType: 'company' | 'person' - デフォルトは 'company'
+    const type = searchType || 'company';
+    const targetName = company; // 検索対象名（企業名または人物名）
+
+    if (!query || !targetName || !answer) {
       return new Response(
         JSON.stringify({ error: '必須項目を入力してください' }),
         {
@@ -72,84 +76,145 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
         }
       );
     }
-    
+
     // 新しい検索結果を作成
     const searchResult = new SearchResult({
       userId: user.id,
       query: query.trim(),
-      company: company.trim(),
+      company: targetName.trim(), // 後方互換性のためcompanyフィールドを使用
       answer,
-      metadata: metadata || {}
+      metadata: { ...metadata, searchType: type }
     });
 
     await searchResult.save();
 
-    // 会社コレクションにも保存/更新（全ユーザーが閲覧可能にする）
-    const companySlug = company.trim().toLowerCase();
-    try {
-      const existingCompany = await Company.findOne({
-        $or: [
-          { slug: companySlug },
-          { name: company.trim() }
-        ]
-      });
+    const slug = targetName.trim().toLowerCase().replace(/\s+/g, '-');
 
-      if (existingCompany) {
-        // 既存の会社がある場合、以下の条件で更新：
-        // 1. プレースホルダー（短い説明文や「情報収集中」）
-        // 2. 新しいanswerが既存より大幅に長い（2倍以上かつ500文字以上長い）
-        const isPlaceholder = !existingCompany.description ||
-          existingCompany.description === '情報収集中...' ||
-          existingCompany.description.length < 50;
-
-        const answerIsSignificantlyLonger = answer.length > existingCompany.description.length * 2 &&
-          answer.length - existingCompany.description.length > 500;
-
-        if (isPlaceholder || answerIsSignificantlyLonger) {
-          await Company.updateOne(
-            { _id: existingCompany._id },
-            {
-              $set: {
-                description: answer,
-                sources: metadata?.sources || [],
-                lastSearchAt: new Date()
-              },
-              $inc: { searchCount: 1 }
-            }
-          );
-          console.log(`Updated company description for: ${company.trim()} (placeholder: ${isPlaceholder}, longer: ${answerIsSignificantlyLonger})`);
-        } else {
-          // 検索回数だけ更新
-          await Company.updateOne(
-            { _id: existingCompany._id },
-            {
-              $inc: { searchCount: 1 },
-              $set: { lastSearchAt: new Date() }
-            }
-          );
-        }
-      } else {
-        // 新しい会社を作成
-        const newCompany = new Company({
-          name: company.trim(),
-          slug: companySlug,
-          description: answer,
-          industry: metadata?.facts?.find((f: any) => f.label?.includes('業界'))?.value || '情報収集中...',
-          founded: metadata?.facts?.find((f: any) => f.label?.includes('設立'))?.value || '情報収集中',
-          employees: metadata?.facts?.find((f: any) => f.label?.includes('従業員'))?.value || '情報収集中',
-          website: metadata?.facts?.find((f: any) => f.label?.includes('ウェブサイト'))?.value || '',
-          sources: metadata?.sources || [],
-          searchCount: 1,
-          averageRating: 0,
-          dataSource: 'ai_search',
-          lastSearchAt: new Date()
+    if (type === 'person') {
+      // 人物コレクションに保存/更新
+      try {
+        const existingPerson = await Person.findOne({
+          $or: [
+            { slug: slug },
+            { name: targetName.trim() }
+          ]
         });
-        await newCompany.save();
-        console.log(`Created new company: ${company.trim()}`);
+
+        if (existingPerson) {
+          const isPlaceholder = !existingPerson.biography ||
+            existingPerson.biography === '情報収集中...' ||
+            existingPerson.biography.length < 50;
+
+          const answerIsSignificantlyLonger = answer.length > existingPerson.biography.length * 2 &&
+            answer.length - existingPerson.biography.length > 500;
+
+          if (isPlaceholder || answerIsSignificantlyLonger) {
+            await Person.updateOne(
+              { _id: existingPerson._id },
+              {
+                $set: {
+                  biography: answer,
+                  sources: metadata?.sources || [],
+                  lastSearchAt: new Date(),
+                  company: metadata?.facts?.find((f: any) => f.label?.includes('所属') || f.label?.includes('会社'))?.value || existingPerson.company,
+                  position: metadata?.facts?.find((f: any) => f.label?.includes('役職') || f.label?.includes('肩書'))?.value || existingPerson.position,
+                  title: metadata?.facts?.find((f: any) => f.label?.includes('肩書'))?.value || existingPerson.title,
+                },
+                $inc: { searchCount: 1 }
+              }
+            );
+            console.log(`Updated person biography for: ${targetName.trim()}`);
+          } else {
+            await Person.updateOne(
+              { _id: existingPerson._id },
+              {
+                $inc: { searchCount: 1 },
+                $set: { lastSearchAt: new Date() }
+              }
+            );
+          }
+        } else {
+          // 新しい人物を作成
+          const newPerson = new Person({
+            name: targetName.trim(),
+            slug: slug,
+            biography: answer,
+            company: metadata?.facts?.find((f: any) => f.label?.includes('所属') || f.label?.includes('会社'))?.value || '',
+            position: metadata?.facts?.find((f: any) => f.label?.includes('役職'))?.value || '',
+            title: metadata?.facts?.find((f: any) => f.label?.includes('肩書'))?.value || '',
+            sources: metadata?.sources || [],
+            searchCount: 1,
+            averageRating: 0,
+            dataSource: 'ai_search',
+            lastSearchAt: new Date()
+          });
+          await newPerson.save();
+          console.log(`Created new person: ${targetName.trim()}`);
+        }
+      } catch (personError) {
+        console.error('Error updating person:', personError);
       }
-    } catch (companyError) {
-      console.error('Error updating company:', companyError);
-      // 会社更新エラーは無視して続行
+    } else {
+      // 会社コレクションに保存/更新（既存の処理）
+      try {
+        const existingCompany = await Company.findOne({
+          $or: [
+            { slug: slug },
+            { name: targetName.trim() }
+          ]
+        });
+
+        if (existingCompany) {
+          const isPlaceholder = !existingCompany.description ||
+            existingCompany.description === '情報収集中...' ||
+            existingCompany.description.length < 50;
+
+          const answerIsSignificantlyLonger = answer.length > existingCompany.description.length * 2 &&
+            answer.length - existingCompany.description.length > 500;
+
+          if (isPlaceholder || answerIsSignificantlyLonger) {
+            await Company.updateOne(
+              { _id: existingCompany._id },
+              {
+                $set: {
+                  description: answer,
+                  sources: metadata?.sources || [],
+                  lastSearchAt: new Date()
+                },
+                $inc: { searchCount: 1 }
+              }
+            );
+            console.log(`Updated company description for: ${targetName.trim()}`);
+          } else {
+            await Company.updateOne(
+              { _id: existingCompany._id },
+              {
+                $inc: { searchCount: 1 },
+                $set: { lastSearchAt: new Date() }
+              }
+            );
+          }
+        } else {
+          const newCompany = new Company({
+            name: targetName.trim(),
+            slug: slug,
+            description: answer,
+            industry: metadata?.facts?.find((f: any) => f.label?.includes('業界'))?.value || '情報収集中...',
+            founded: metadata?.facts?.find((f: any) => f.label?.includes('設立'))?.value || '情報収集中',
+            employees: metadata?.facts?.find((f: any) => f.label?.includes('従業員'))?.value || '情報収集中',
+            website: metadata?.facts?.find((f: any) => f.label?.includes('ウェブサイト'))?.value || '',
+            sources: metadata?.sources || [],
+            searchCount: 1,
+            averageRating: 0,
+            dataSource: 'ai_search',
+            lastSearchAt: new Date()
+          });
+          await newCompany.save();
+          console.log(`Created new company: ${targetName.trim()}`);
+        }
+      } catch (companyError) {
+        console.error('Error updating company:', companyError);
+      }
     }
 
     return new Response(
@@ -163,14 +228,16 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
           answer: searchResult.answer,
           metadata: searchResult.metadata,
           createdAt: searchResult.createdAt
-        }
+        },
+        searchType: type,
+        slug: slug
       }),
       {
         status: 201,
         headers: { 'Content-Type': 'application/json' }
       }
     );
-    
+
   } catch (error) {
     console.error('Save search result error:', error);
     return new Response(

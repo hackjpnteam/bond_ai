@@ -5,14 +5,14 @@ import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookmarkPlus, Building2, User, Search, Trash2, ExternalLink, Calendar, MapPin } from 'lucide-react';
+import { BookmarkPlus, Building2, User, Search, Trash2, ExternalLink, Calendar, MapPin, Package } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { LockedFeature } from '@/components/OnboardingBanner';
 
 interface SavedItem {
   id: string;
-  itemType: 'company' | 'person' | 'search_result';
+  itemType: 'company' | 'person' | 'service' | 'search_result';
   itemData: {
     name: string;
     slug?: string;
@@ -43,7 +43,7 @@ export default function ListsPage() {
   const [ratedItems, setRatedItems] = useState<RatedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'saved' | 'rated'>('rated');
-  const [filter, setFilter] = useState<'all' | 'company' | 'person' | 'search_result'>('all');
+  const [filter, setFilter] = useState<'all' | 'company' | 'person' | 'service' | 'search_result'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingEvaluationId, setUpdatingEvaluationId] = useState<string | null>(null);
 
@@ -271,6 +271,8 @@ export default function ListsPage() {
         return <Building2 className="w-4 h-4" />;
       case 'person':
         return <User className="w-4 h-4" />;
+      case 'service':
+        return <Package className="w-4 h-4" />;
       case 'search_result':
         return <Search className="w-4 h-4" />;
       default:
@@ -284,6 +286,8 @@ export default function ListsPage() {
         return '企業';
       case 'person':
         return '人物';
+      case 'service':
+        return 'サービス';
       case 'search_result':
         return '検索結果';
       default:
@@ -297,6 +301,8 @@ export default function ListsPage() {
         return 'bg-blue-100 text-blue-700';
       case 'person':
         return 'bg-green-100 text-green-700';
+      case 'service':
+        return 'bg-orange-100 text-orange-700';
       case 'search_result':
         return 'bg-purple-100 text-purple-700';
       default:
@@ -398,6 +404,13 @@ export default function ListsPage() {
                   onClick={() => setFilter('person')}
                 >
                   人物
+                </Button>
+                <Button
+                  variant={filter === 'service' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilter('service')}
+                >
+                  サービス
                 </Button>
                 <Button
                   variant={filter === 'search_result' ? 'default' : 'outline'}
@@ -552,7 +565,7 @@ export default function ListsPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <div className={`w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center ${getItemTypeColor(item.itemType)}`}>
-                          {item.itemType === 'company' ? (
+                          {item.itemType === 'company' || item.itemType === 'service' ? (
                             <>
                               <img
                                 src={`/api/company-logo/${encodeURIComponent(item.itemData.slug || item.itemData.name.toLowerCase())}`}
@@ -565,7 +578,7 @@ export default function ListsPage() {
                                 }}
                               />
                               <div className="w-full h-full items-center justify-center hidden">
-                                <Building2 className="w-5 h-5" />
+                                {item.itemType === 'service' ? <Package className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
                               </div>
                             </>
                           ) : item.itemType === 'person' ? (
@@ -625,9 +638,9 @@ export default function ListsPage() {
                           {new Date(item.createdAt).toLocaleDateString('ja-JP')}
                         </span>
                       </div>
-                      {item.itemType === 'company' && (
-                        <Link 
-                          href={`/company/${item.itemData.slug || item.itemData.name.toLowerCase()}`}
+                      {(item.itemType === 'company' || item.itemType === 'service') && (
+                        <Link
+                          href={`/${item.itemType === 'service' ? 'service' : 'company'}/${item.itemData.slug || item.itemData.name.toLowerCase()}`}
                           className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
                         >
                           詳細を見る

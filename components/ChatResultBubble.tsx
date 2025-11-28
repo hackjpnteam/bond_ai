@@ -771,7 +771,7 @@ export function ChatResultBubble({ result, mode, company }: ChatResultBubbleProp
                     },
                     credentials: 'include',
                     body: JSON.stringify({
-                      itemType: mode === 'company' ? 'company' : 'person',
+                      itemType: mode || 'company',
                       itemData: {
                         name: company,
                         description: result.answer,

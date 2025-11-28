@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 import connectDB from '@/lib/mongodb';
 import Evaluation from '@/models/Evaluation';
+import Company from '@/models/Company';
 
 // PUT /api/evaluations/[id] - 評価を更新
 export const PUT = requireAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
@@ -106,19 +107,20 @@ export const PUT = requireAuth(async (request: NextRequest, user, { params }: { 
   }
 });
 
-// DELETE /api/evaluations/[id] - 評価を削除
+// DELETE /api/evaluations/[id] - 評価を削除（トラストマップの繋がりも削除）
 export const DELETE = requireAuth(async (request: NextRequest, user, { params }: { params: Promise<{ id: string }> }) => {
   try {
     await connectDB();
 
     const { id } = await params;
-    
-    const result = await Evaluation.deleteOne({
+
+    // まず評価を取得して企業情報を保持
+    const evaluation = await Evaluation.findOne({
       _id: id,
       userId: user.id
     });
-    
-    if (result.deletedCount === 0) {
+
+    if (!evaluation) {
       return new Response(
         JSON.stringify({ error: '評価が見つかりません' }),
         {
@@ -127,18 +129,39 @@ export const DELETE = requireAuth(async (request: NextRequest, user, { params }:
         }
       );
     }
-    
+
+    const companySlug = evaluation.companySlug;
+
+    // 評価を削除
+    await Evaluation.deleteOne({ _id: id });
+
+    // この企業への評価がこのユーザーから他にないかチェック
+    const remainingEvaluations = await Evaluation.countDocuments({
+      userId: user.id,
+      companySlug: companySlug
+    });
+
+    // 他に評価がない場合、企業のreviewedByからユーザーを削除
+    if (remainingEvaluations === 0 && companySlug) {
+      await Company.updateOne(
+        { slug: companySlug },
+        { $pull: { reviewedBy: user.id } }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: '評価を削除しました'
+        message: '評価を削除しました。トラストマップからの繋がりも解除されました。',
+        companySlug: companySlug,
+        connectionRemoved: remainingEvaluations === 0
       }),
       {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       }
     );
-    
+
   } catch (error) {
     console.error('Delete evaluation error:', error);
     return new Response(

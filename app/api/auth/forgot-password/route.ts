@@ -208,11 +208,21 @@ async function sendPasswordResetEmail(email: string, resetUrl: string) {
     return;
   }
 
-  const resend = new Resend(apiKey);
-  await resend.emails.send({
-    from: 'Bond <team@hackjpn.com>',
-    to: [email],
-    subject: 'Bondパスワードリセットのご案内',
-    html: createPasswordResetEmailHtml(email, resetUrl),
-  });
+  try {
+    const resend = new Resend(apiKey);
+    const result = await resend.emails.send({
+      from: 'Bond <noreply@bond-app.com>',
+      to: [email],
+      subject: 'Bondパスワードリセットのご案内',
+      html: createPasswordResetEmailHtml(email, resetUrl),
+    });
+    console.log('Resend API response:', JSON.stringify(result, null, 2));
+
+    if (result.error) {
+      console.error('Resend API error:', result.error);
+    }
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    throw error;
+  }
 }

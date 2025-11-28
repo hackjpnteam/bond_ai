@@ -12,6 +12,7 @@ export interface ICompany extends Document {
   averageRating: number;
   isUserEdited: boolean;
   dataSource: 'auto' | 'user_edited' | 'mixed' | 'ai_search';
+  entityType: 'company' | 'service';
   lastEditedBy?: string;
   lastEditedAt?: Date;
   lastSearchAt?: Date;
@@ -94,6 +95,11 @@ const CompanySchema: Schema<ICompany> = new Schema({
     type: String,
     enum: ['auto', 'user_edited', 'mixed', 'ai_search'],
     default: 'auto'
+  },
+  entityType: {
+    type: String,
+    enum: ['company', 'service'],
+    default: 'company'
   },
   lastEditedBy: {
     type: String

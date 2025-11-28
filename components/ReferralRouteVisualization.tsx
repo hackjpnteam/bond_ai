@@ -28,15 +28,9 @@ interface ReferralRouteVisualizationProps {
 }
 
 export function ReferralRouteVisualization({ routes, targetCompany }: ReferralRouteVisualizationProps) {
+  // ルートが見つからない場合はセクション自体を非表示
   if (!routes || routes.length === 0) {
-    return (
-      <div className="text-center py-6 md:py-8">
-        <div className="text-gray-400 mb-3 md:mb-4">
-          <Users className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2" />
-        </div>
-        <p className="text-sm md:text-base text-gray-600">最適なルートが見つかりませんでした</p>
-      </div>
-    )
+    return null
   }
 
   const getSuccessColor = (probability: number) => {

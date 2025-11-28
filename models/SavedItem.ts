@@ -2,7 +2,7 @@ import mongoose, { Document, Model, Schema } from 'mongoose';
 
 export interface ISavedItem extends Document {
   userId: mongoose.Types.ObjectId;
-  itemType: 'company' | 'person' | 'search_result';
+  itemType: 'company' | 'person' | 'service' | 'search_result';
   itemData: {
     name: string;
     slug?: string;
@@ -24,7 +24,7 @@ const SavedItemSchema: Schema<ISavedItem> = new Schema({
   },
   itemType: {
     type: String,
-    enum: ['company', 'person', 'search_result'],
+    enum: ['company', 'person', 'service', 'search_result'],
     required: true
   },
   itemData: {
@@ -49,6 +49,11 @@ const SavedItemSchema: Schema<ISavedItem> = new Schema({
 // Compound indexes
 SavedItemSchema.index({ userId: 1, itemType: 1, createdAt: -1 });
 SavedItemSchema.index({ userId: 1, 'itemData.name': 1 });
+
+// Delete cached model in development to apply schema changes
+if (process.env.NODE_ENV !== 'production' && mongoose.models.SavedItem) {
+  delete mongoose.models.SavedItem;
+}
 
 const SavedItem: Model<ISavedItem> = mongoose.models.SavedItem || mongoose.model<ISavedItem>('SavedItem', SavedItemSchema);
 

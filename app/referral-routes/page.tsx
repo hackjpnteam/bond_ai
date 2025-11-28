@@ -44,6 +44,12 @@ interface CompanyResult {
   averageRating: number
 }
 
+interface PopularCompany {
+  name: string
+  evaluationCount: number
+  avgRating: number
+}
+
 type SearchMode = 'company' | 'industry'
 
 export default function ReferralRoutesPage() {
@@ -61,22 +67,24 @@ export default function ReferralRoutesPage() {
   const [selectedIndustry, setSelectedIndustry] = useState('')
   const [loadingIndustries, setLoadingIndustries] = useState(false)
   const [loadingCompanies, setLoadingCompanies] = useState(false)
+  const [popularCompanies, setPopularCompanies] = useState<PopularCompany[]>([])
 
-  // 業界一覧を取得
+  // 業界一覧と人気企業を取得
   useEffect(() => {
-    const fetchIndustries = async () => {
+    const fetchData = async () => {
       setLoadingIndustries(true)
       try {
         const res = await fetch('/api/referral-routes')
         const data = await res.json()
         setIndustries(data.industries || [])
+        setPopularCompanies(data.popularCompanies || [])
       } catch (error) {
-        console.error('Error fetching industries:', error)
+        console.error('Error fetching data:', error)
       } finally {
         setLoadingIndustries(false)
       }
     }
-    fetchIndustries()
+    fetchData()
   }, [])
 
   // 業界から会社を検索
@@ -139,14 +147,6 @@ export default function ReferralRoutesPage() {
     e.preventDefault()
     handleSearchWithCompany(targetCompany)
   }
-
-  const popularCompanies = [
-    'chatwork', '株式会社Sopital', 'hackjpn', '株式会社HOKUTO'
-  ]
-
-  const popularIndustries = [
-    'IT', 'テクノロジー', 'ヘルスケア', '金融', 'メディア'
-  ]
 
   // 業界をフィルタリング
   const filteredIndustries = industryQuery
@@ -253,21 +253,28 @@ export default function ReferralRoutesPage() {
                   </div>
                 </form>
 
-                {/* Popular Companies */}
-                <div className="mt-4 md:mt-6">
-                  <p className="text-xs md:text-sm text-gray-600 mb-2 md:mb-3 text-center">人気の企業:</p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {popularCompanies.map((company) => (
-                      <button
-                        key={company}
-                        onClick={() => setTargetCompany(company)}
-                        className="px-3 py-1.5 text-xs md:text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
-                      >
-                        {company}
-                      </button>
-                    ))}
+                {/* Popular Companies - 評価が多い企業を動的に表示 */}
+                {popularCompanies.length > 0 && (
+                  <div className="mt-4 md:mt-6">
+                    <p className="text-xs md:text-sm text-gray-600 mb-2 md:mb-3 text-center">人気の企業:</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {popularCompanies.slice(0, 6).map((company) => (
+                        <button
+                          key={company.name}
+                          onClick={() => setTargetCompany(company.name)}
+                          className="px-3 py-1.5 text-xs md:text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors flex items-center gap-1"
+                        >
+                          {company.name}
+                          {company.avgRating > 0 && (
+                            <span className="flex items-center text-yellow-500">
+                              <Star className="w-3 h-3 fill-current" />
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
 
@@ -288,40 +295,54 @@ export default function ReferralRoutesPage() {
                       />
                     </div>
 
-                    {/* 人気の業界 */}
-                    <div className="mb-4">
-                      <p className="text-xs md:text-sm text-gray-600 mb-2 text-center">人気の業界:</p>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {popularIndustries.map((ind) => (
-                          <button
-                            key={ind}
-                            onClick={() => handleIndustrySearch(ind)}
-                            className="px-3 py-1.5 text-xs md:text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-full transition-colors"
-                          >
-                            {ind}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
                     {/* 業界一覧 */}
                     {loadingIndustries ? (
                       <div className="text-center py-8">
                         <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600" />
                         <p className="text-sm text-gray-500 mt-2">業界一覧を読み込み中...</p>
                       </div>
+                    ) : filteredIndustries.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Network className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                        <p className="text-gray-500">該当する業界が見つかりませんでした</p>
+                      </div>
                     ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                        {filteredIndustries.map((industry) => (
-                          <button
-                            key={industry.name}
-                            onClick={() => handleIndustrySearch(industry.name)}
-                            className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left"
-                          >
-                            <span className="text-sm font-medium text-gray-800 truncate">{industry.name}</span>
-                            <span className="text-xs text-gray-500 ml-2">{industry.count}社</span>
-                          </button>
-                        ))}
+                      <div className="space-y-3">
+                        {/* 人気の業界（上位5件をピル型で表示） */}
+                        {!industryQuery && industries.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-xs md:text-sm text-gray-500 mb-2">人気の業界:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {industries.slice(0, 5).map((ind) => (
+                                <button
+                                  key={ind.name}
+                                  onClick={() => handleIndustrySearch(ind.name)}
+                                  className="px-3 py-1.5 text-xs md:text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-full transition-colors flex items-center gap-1"
+                                >
+                                  {ind.name}
+                                  <span className="text-purple-500">({ind.count})</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 全業界リスト */}
+                        <div>
+                          <p className="text-xs md:text-sm text-gray-500 mb-2">すべての業界:</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                            {filteredIndustries.map((industry) => (
+                              <button
+                                key={industry.name}
+                                onClick={() => handleIndustrySearch(industry.name)}
+                                className="flex items-center justify-between p-3 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 border border-transparent rounded-lg transition-colors text-left"
+                              >
+                                <span className="text-sm font-medium text-gray-800 truncate">{industry.name}</span>
+                                <span className="text-xs text-gray-500 ml-2 flex-shrink-0">{industry.count}社</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </>
@@ -402,31 +423,73 @@ export default function ReferralRoutesPage() {
           {/* Results Section */}
           {hasSearched && !loading && (
             <>
-              {analysis && analysis.totalRoutes > 0 && (
-                <div className="card p-4 md:p-6 mb-4 md:mb-6">
-                  <h3 className="text-base md:text-lg font-bold text-gray-800 mb-3 md:mb-4">分析結果サマリー</h3>
-                  <div className="grid grid-cols-3 gap-2 md:gap-4">
-                    <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
-                      <div className="text-xl md:text-2xl font-bold text-blue-600">{analysis.totalRoutes}</div>
-                      <div className="text-xs md:text-sm text-gray-600">発見ルート数</div>
-                    </div>
-                    <div className="text-center p-3 md:p-4 bg-green-50 rounded-lg">
-                      <div className="text-xl md:text-2xl font-bold text-green-600">
-                        {Math.round(analysis.averageSuccessRate * 100)}%
+              {analysis && analysis.totalRoutes > 0 ? (
+                <>
+                  <div className="card p-4 md:p-6 mb-4 md:mb-6">
+                    <h3 className="text-base md:text-lg font-bold text-gray-800 mb-3 md:mb-4">分析結果サマリー</h3>
+                    <div className="grid grid-cols-3 gap-2 md:gap-4">
+                      <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
+                        <div className="text-xl md:text-2xl font-bold text-blue-600">{analysis.totalRoutes}</div>
+                        <div className="text-xs md:text-sm text-gray-600">発見ルート数</div>
                       </div>
-                      <div className="text-xs md:text-sm text-gray-600">平均成功率</div>
-                    </div>
-                    <div className="text-center p-3 md:p-4 bg-purple-50 rounded-lg">
-                      <div className="text-xl md:text-2xl font-bold text-purple-600">
-                        {analysis.bestRoute ? `${analysis.bestRoute.estimatedDays}日` : 'N/A'}
+                      <div className="text-center p-3 md:p-4 bg-green-50 rounded-lg">
+                        <div className="text-xl md:text-2xl font-bold text-green-600">
+                          {Math.round(analysis.averageSuccessRate * 100)}%
+                        </div>
+                        <div className="text-xs md:text-sm text-gray-600">平均成功率</div>
                       </div>
-                      <div className="text-xs md:text-sm text-gray-600">最短期間</div>
+                      <div className="text-center p-3 md:p-4 bg-purple-50 rounded-lg">
+                        <div className="text-xl md:text-2xl font-bold text-purple-600">
+                          {analysis.bestRoute ? `${analysis.bestRoute.estimatedDays}日` : 'N/A'}
+                        </div>
+                        <div className="text-xs md:text-sm text-gray-600">最短期間</div>
+                      </div>
+                    </div>
+                  </div>
+                  <ReferralRouteVisualization routes={routes} targetCompany={targetCompany} />
+                </>
+              ) : (
+                <div className="card p-6 md:p-8 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Network className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">
+                    「{targetCompany}」へのルートはまだ存在しません
+                  </h3>
+                  <p className="text-sm md:text-base text-gray-600 mb-4">
+                    この企業への紹介ルートを構築するには、以下の方法があります：
+                  </p>
+                  <div className="max-w-md mx-auto text-left space-y-3">
+                    <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-blue-600 text-sm font-bold">1</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">つながりを増やす</p>
+                        <p className="text-xs text-gray-600">他のユーザーとつながることでルートが見つかる可能性が高まります</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
+                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-green-600 text-sm font-bold">2</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">企業を評価する</p>
+                        <p className="text-xs text-gray-600">この企業と取引がある方が評価を投稿するとルートが構築されます</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg">
+                      <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-purple-600 text-sm font-bold">3</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">知り合いを招待する</p>
+                        <p className="text-xs text-gray-600">この企業に関係のある知り合いをBondに招待してみましょう</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
-
-              <ReferralRouteVisualization routes={routes} targetCompany={targetCompany} />
             </>
           )}
 

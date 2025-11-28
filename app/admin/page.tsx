@@ -88,7 +88,22 @@ interface EvaluationRecord {
   user: { name: string; email: string };
 }
 
-type Tab = 'overview' | 'users' | 'searches' | 'evaluations';
+type Tab = 'overview' | 'users' | 'searches' | 'evaluations' | 'companies';
+
+interface CompanyRecord {
+  _id: string;
+  name: string;
+  slug: string;
+  industry: string;
+  description: string;
+  founded: string;
+  employees: string;
+  website?: string;
+  averageRating: number;
+  searchCount: number;
+  createdAt: string;
+  evaluationCount: number;
+}
 
 export default function AdminPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -102,6 +117,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [companies, setCompanies] = useState<CompanyRecord[]>([]);
+
   // ページネーション
   const [userPage, setUserPage] = useState(1);
   const [userTotal, setUserTotal] = useState(0);
@@ -109,11 +126,14 @@ export default function AdminPage() {
   const [searchTotal, setSearchTotal] = useState(0);
   const [evalPage, setEvalPage] = useState(1);
   const [evalTotal, setEvalTotal] = useState(0);
+  const [companyPage, setCompanyPage] = useState(1);
+  const [companyTotal, setCompanyTotal] = useState(0);
 
   // フィルター
   const [userSearch, setUserSearch] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
   const [evalFilter, setEvalFilter] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('');
 
   const limit = 20;
 
@@ -209,6 +229,24 @@ export default function AdminPage() {
     }
   }, [evalPage, evalFilter]);
 
+  // 会社一覧を取得
+  const fetchCompanies = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        page: companyPage.toString(),
+        limit: limit.toString(),
+        search: companyFilter
+      });
+      const res = await fetch(`/api/admin/companies?${params}`);
+      if (!res.ok) throw new Error('会社一覧の取得に失敗しました');
+      const data = await res.json();
+      setCompanies(data.companies);
+      setCompanyTotal(data.pagination.total);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }, [companyPage, companyFilter]);
+
   // 初期ロード
   useEffect(() => {
     if (authLoading) return;
@@ -230,7 +268,8 @@ export default function AdminPage() {
     if (activeTab === 'users') fetchUsers();
     else if (activeTab === 'searches') fetchSearches();
     else if (activeTab === 'evaluations') fetchEvaluations();
-  }, [activeTab, fetchUsers, fetchSearches, fetchEvaluations]);
+    else if (activeTab === 'companies') fetchCompanies();
+  }, [activeTab, fetchUsers, fetchSearches, fetchEvaluations, fetchCompanies]);
 
   // ユーザー削除
   const handleDeleteUser = async (userId: string, userName: string) => {
@@ -262,6 +301,30 @@ export default function AdminPage() {
       });
       if (!res.ok) throw new Error('削除に失敗しました');
       fetchEvaluations();
+      fetchStats();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // 会社削除
+  const handleDeleteCompany = async (slug: string, companyName: string, deleteRelated: boolean) => {
+    const message = deleteRelated
+      ? `本当に「${companyName}」を削除しますか？関連する評価・検索結果もすべて削除されます。`
+      : `本当に「${companyName}」を削除しますか？評価は残りますが、会社情報は削除されます。`;
+
+    if (!confirm(message)) return;
+
+    try {
+      const res = await fetch(`/api/admin/companies/${encodeURIComponent(slug)}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deleteRelated })
+      });
+      if (!res.ok) throw new Error('削除に失敗しました');
+      const data = await res.json();
+      alert(`${companyName}を削除しました。${deleteRelated ? `(評価: ${data.results.evaluations}件, 検索結果: ${data.results.searchResults}件 削除)` : ''}`);
+      fetchCompanies();
       fetchStats();
     } catch (err: any) {
       alert(err.message);
@@ -311,6 +374,7 @@ export default function AdminPage() {
             {[
               { id: 'overview', label: '概要', icon: BarChart3 },
               { id: 'users', label: 'ユーザー', icon: Users },
+              { id: 'companies', label: '会社', icon: Building2 },
               { id: 'searches', label: '検索履歴', icon: Search },
               { id: 'evaluations', label: '評価', icon: Star }
             ].map(tab => (
@@ -705,6 +769,121 @@ export default function AdminPage() {
               total={evalTotal}
               limit={limit}
               onPageChange={setEvalPage}
+            />
+          </div>
+        )}
+
+        {/* 会社タブ */}
+        {activeTab === 'companies' && (
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <input
+                type="text"
+                placeholder="会社名、スラッグ、業界で検索..."
+                value={companyFilter}
+                onChange={e => {
+                  setCompanyFilter(e.target.value);
+                  setCompanyPage(1);
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg"
+              />
+              <button onClick={fetchCompanies} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                <RefreshCw className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">会社名</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">スラッグ</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">業界</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">評価</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">検索数</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">評価数</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作成日</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {companies.map(company => (
+                    <tr key={company._id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <a
+                          href={`/company/${company.slug}`}
+                          target="_blank"
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {company.name}
+                        </a>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{company.slug}</td>
+                      <td className="px-4 py-3 text-sm">{company.industry || '-'}</td>
+                      <td className="px-4 py-3 text-center">
+                        {company.averageRating > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-yellow-500">
+                            <Star className="w-4 h-4 fill-current" />
+                            {company.averageRating.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm">{company.searchCount}</td>
+                      <td className="px-4 py-3 text-center text-sm">{company.evaluationCount}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {new Date(company.createdAt).toLocaleDateString('ja-JP')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <a
+                            href={`/company/${company.slug}`}
+                            target="_blank"
+                            className="p-1 text-gray-500 hover:bg-gray-100 rounded"
+                            title="ページを見る"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </a>
+                          <button
+                            onClick={() => handleDeleteCompany(company.slug, company.name, false)}
+                            className="p-1 text-orange-500 hover:bg-orange-50 rounded"
+                            title="会社のみ削除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCompany(company.slug, company.name, true)}
+                            className="p-1 text-red-500 hover:bg-red-50 rounded"
+                            title="関連データも含めて削除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 凡例 */}
+            <div className="flex items-center gap-6 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-orange-500" />
+                <span>会社のみ削除</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-red-500" />
+                <span>関連データも削除</span>
+              </div>
+            </div>
+
+            <Pagination
+              page={companyPage}
+              total={companyTotal}
+              limit={limit}
+              onPageChange={setCompanyPage}
             />
           </div>
         )}

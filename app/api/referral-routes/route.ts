@@ -479,24 +479,43 @@ export async function GET(request: NextRequest) {
   await connectDB()
   const db = mongoose.connection.db
   if (!db) {
-    return NextResponse.json({ industries: [] })
+    return NextResponse.json({ industries: [], popularCompanies: [] })
   }
 
   try {
+    // 業界一覧（不要な値を除外）
+    const excludeIndustries = ['情報収集中...', '未分類', '', null, undefined]
     const industries = await db.collection("companies").aggregate([
+      { $match: { industry: { $nin: excludeIndustries, $exists: true, $ne: '' } } },
       { $group: { _id: '$industry', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 30 }
+      { $limit: 20 }
     ]).toArray()
+
+    // 評価が多い企業（ルートがある可能性が高い）を取得
+    const popularCompaniesData = await db.collection("evaluations").aggregate([
+      { $group: { _id: '$companyName', count: { $sum: 1 }, avgRating: { $avg: '$rating' } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]).toArray()
+
+    const popularCompanies = popularCompaniesData
+      .filter(c => c._id) // null/undefinedを除外
+      .map(c => ({
+        name: c._id,
+        evaluationCount: c.count,
+        avgRating: c.avgRating
+      }))
 
     return NextResponse.json({
       industries: industries.map(i => ({
         name: i._id,
         count: i.count
-      }))
+      })),
+      popularCompanies
     })
   } catch (error) {
     console.error('Error fetching industries:', error)
-    return NextResponse.json({ industries: [] })
+    return NextResponse.json({ industries: [], popularCompanies: [] })
   }
 }

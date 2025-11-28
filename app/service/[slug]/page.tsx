@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, Package, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Heart, MessageCircle, Send, ChevronDown, ChevronUp, User } from 'lucide-react';
+import { Star, Package, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Heart, MessageCircle, Send, ChevronDown, ChevronUp, User, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getUserDisplayName } from '@/lib/user-display';
 import { getRelationshipLabel, RELATIONSHIP_OPTIONS, RELATIONSHIP_TYPES } from '@/lib/relationship';
@@ -778,6 +778,46 @@ export default function ServicePage() {
     });
   };
 
+  // 評価削除ハンドラ
+  const handleDeleteEvaluation = async (evaluationId: string) => {
+    if (!confirm('この評価を削除しますか？削除するとトラストマップからの繋がりも解除されます。')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/evaluations/${evaluationId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // ローカル状態から評価を削除
+        if (serviceData) {
+          const updatedEvaluations = serviceData.evaluations.filter(e => e.id !== evaluationId);
+          const averageRating = updatedEvaluations.length > 0
+            ? updatedEvaluations.reduce((sum, e) => sum + e.rating, 0) / updatedEvaluations.length
+            : 0;
+
+          setServiceData({
+            ...serviceData,
+            evaluations: updatedEvaluations,
+            averageRating
+          });
+        }
+        alert(data.connectionRemoved
+          ? '評価を削除しました。トラストマップからの繋がりも解除されました。'
+          : '評価を削除しました。');
+      } else {
+        alert(data.error || '評価の削除に失敗しました');
+      }
+    } catch (error) {
+      console.error('Delete evaluation error:', error);
+      alert('評価の削除に失敗しました');
+    }
+  };
+
   const handleLike = async (evaluationId: string) => {
     if (!currentUser?.id) {
       alert('いいねするにはログインが必要です');
@@ -1465,14 +1505,24 @@ URL: ${window.location.href}`;
                                 )}
                               </button>
 
+                              {/* 自分の評価の場合は編集・削除ボタンを表示 */}
                               {currentUser?.id === evaluation.userId && (
-                                <button
-                                  onClick={() => handleEditEvaluation(evaluation)}
-                                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors ml-auto"
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                  <span className="hidden sm:inline">編集</span>
-                                </button>
+                                <div className="flex items-center gap-2 ml-auto">
+                                  <button
+                                    onClick={() => handleEditEvaluation(evaluation)}
+                                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                    <span className="hidden sm:inline">編集</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteEvaluation(evaluation.id)}
+                                    className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 transition-colors"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    <span className="hidden sm:inline">削除</span>
+                                  </button>
+                                </div>
                               )}
                             </div>
 

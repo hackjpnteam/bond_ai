@@ -192,9 +192,9 @@ export default function Page() {
             <div className="flex space-x-6">
               <CustomLink href="/ranking" className="hover:text-ash-text transition-colors">ランキング</CustomLink>
               <CustomLink href="/timeline" className="hover:text-ash-text transition-colors">タイムライン</CustomLink>
-              <CustomLink href="#" className="hover:text-ash-text transition-colors">プライバシー</CustomLink>
-              <CustomLink href="#" className="hover:text-ash-text transition-colors">利用規約</CustomLink>
-              <CustomLink href="#" className="hover:text-ash-text transition-colors">サポート</CustomLink>
+              <CustomLink href="/privacy" className="hover:text-ash-text transition-colors">プライバシー</CustomLink>
+              <CustomLink href="/terms" className="hover:text-ash-text transition-colors">利用規約</CustomLink>
+              <CustomLink href="/support" className="hover:text-ash-text transition-colors">サポート</CustomLink>
             </div>
           </div>
           <div className="border-t border-ash-line mt-8 pt-8 text-center">
@@ -208,8 +208,8 @@ export default function Page() {
 
 function CustomLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
   return (
-    <a href={href} className={className}>
+    <Link href={href} className={className}>
       {children}
-    </a>
+    </Link>
   );
 }

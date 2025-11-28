@@ -47,25 +47,27 @@ export async function GET(
       .limit(100)
       .lean();
 
-    // 企業別にグループ化して関係性情報を構築
-    const companyRelationships = evaluations.map(evaluation => {
-      const relationshipType = evaluation.relationshipType ?? 0;
+    // 企業別にグループ化して関係性情報を構築（匿名投稿は除外）
+    const companyRelationships = evaluations
+      .filter(evaluation => !evaluation.isAnonymous)
+      .map(evaluation => {
+        const relationshipType = evaluation.relationshipType ?? 0;
 
-      return {
-        id: evaluation._id.toString(),
-        companyName: evaluation.companyName,
-        companySlug: evaluation.companySlug,
-        rating: evaluation.rating,
-        comment: evaluation.comment,
-        relationshipType: relationshipType,
-        relationshipLabel: getRelationshipLabel(relationshipType),
-        relationshipSource: 'evaluation',
-        categories: evaluation.categories,
-        isAnonymous: evaluation.isAnonymous || false,
-        createdAt: evaluation.createdAt,
-        updatedAt: evaluation.updatedAt
-      };
-    });
+        return {
+          id: evaluation._id.toString(),
+          companyName: evaluation.companyName,
+          companySlug: evaluation.companySlug,
+          rating: evaluation.rating,
+          comment: evaluation.comment,
+          relationshipType: relationshipType,
+          relationshipLabel: getRelationshipLabel(relationshipType),
+          relationshipSource: 'evaluation',
+          categories: evaluation.categories,
+          isAnonymous: false,
+          createdAt: evaluation.createdAt,
+          updatedAt: evaluation.updatedAt
+        };
+      });
 
     // バッジを生成
     const achievements = [];
@@ -234,21 +236,24 @@ export async function GET(
       });
     }
 
-    // 最近の活動を生成
+    // 最近の活動を生成（匿名投稿は除外）
     const recentActivity = [];
 
-    // 評価活動を追加
-    evaluations.slice(0, 10).forEach(evaluation => {
-      recentActivity.push({
-        id: `review-${evaluation._id.toString()}`,
-        type: 'review',
-        description: `${evaluation.companyName}を評価しました`,
-        companyName: evaluation.companyName,
-        companySlug: evaluation.companySlug,
-        rating: evaluation.rating,
-        date: evaluation.createdAt
+    // 評価活動を追加（匿名投稿は除外）
+    evaluations
+      .filter(evaluation => !evaluation.isAnonymous)
+      .slice(0, 10)
+      .forEach(evaluation => {
+        recentActivity.push({
+          id: `review-${evaluation._id.toString()}`,
+          type: 'review',
+          description: `${evaluation.companyName}を評価しました`,
+          companyName: evaluation.companyName,
+          companySlug: evaluation.companySlug,
+          rating: evaluation.rating,
+          date: evaluation.createdAt
+        });
       });
-    });
 
     // バッジ獲得活動を追加
     achievements.forEach(achievement => {
@@ -302,7 +307,7 @@ export async function GET(
         createdAt: user.createdAt,
         trustScore: trustScore,
         connectionCount: connectionCount,
-        reviewCount: reviewCount,
+        reviewCount: companyRelationships.length,
         companyRelationships: companyRelationships,
         achievements: achievements,
         recentActivity: limitedActivity

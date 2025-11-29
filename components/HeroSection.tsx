@@ -19,33 +19,23 @@ export function HeroSection() {
             {/* タイトル */}
             <div className="relative z-10 text-center">
 
-              <h1 className="text-center animate-slide-in-left mb-4 md:mb-6 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-bold tracking-wide leading-tight md:leading-relaxed">
-                信頼でつながる<br className="sm:hidden" />最適な出会いを。
+              <h1 className="text-center animate-slide-in-left mb-6 md:mb-8 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-bold tracking-wide">
+                <span className="block leading-tight md:leading-snug">アクセスしたい企業・人に</span>
+                <span className="block leading-tight md:leading-snug mt-1 md:mt-2">一番早くたどり着く</span>
               </h1>
 
-              <p className="mx-auto max-w-3xl text-center mb-6 md:mb-8 animate-slide-in-right font-medium leading-relaxed text-sm sm:text-base" style={{animationDelay: '0.3s'}}>
-                Bondは、あなたの「会いたい企業・投資家・顧客」を<br className="hidden sm:block" />
-                信頼スコアに基づいて導き出すビジネスマッチングプラットフォームです。
+              <p className="mx-auto max-w-2xl text-center animate-slide-in-right font-medium leading-loose text-sm sm:text-base md:text-lg text-ash-muted" style={{animationDelay: '0.3s'}}>
+                Bondは、信頼データにもとづいて、
               </p>
-
-              <p className="mx-auto max-w-2xl text-center mb-8 md:mb-12 animate-slide-in-right text-xs sm:text-sm md:text-base leading-relaxed text-ash-muted" style={{animationDelay: '0.4s'}}>
-                起業家・投資家・営業担当・仲介者のすべてが、<br className="hidden sm:block" />
-                "信頼経済圏"の中で成長を加速させます。
+              <p className="mx-auto max-w-2xl text-center animate-slide-in-right font-medium leading-loose text-sm sm:text-base md:text-lg text-ash-muted" style={{animationDelay: '0.4s'}}>
+                資金調達・営業・採用の<span className="font-bold text-ash-text">"正しい入り口"</span>を
               </p>
-
-              <div className="flex flex-col items-center justify-center gap-3 md:gap-4 mb-8 md:mb-12 text-sm sm:text-base md:text-lg font-medium" style={{animationDelay: '0.5s'}}>
-                <div className="flex items-center gap-2">
-                  <span className="text-xl md:text-2xl">📈</span>
-                  <span>信頼で見つかる最適ルート</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xl md:text-2xl">🔍</span>
-                  <span>Bondで評価する・つながる・動く</span>
-                </div>
-              </div>
+              <p className="mx-auto max-w-2xl text-center animate-slide-in-right font-medium leading-loose text-sm sm:text-base md:text-lg text-ash-muted" style={{animationDelay: '0.5s'}}>
+                AIが教えてくれるサービスです。
+              </p>
 
               {/* CTA */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-in-up" style={{animationDelay: '0.7s'}}>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-in-up mt-10 md:mt-14" style={{animationDelay: '0.7s'}}>
                 <Link href="/signup" className="btn-dark group w-full sm:w-auto text-center py-3 px-6">
                   無料で始める
                   <ArrowRight className="inline-block w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

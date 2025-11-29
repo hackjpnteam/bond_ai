@@ -521,21 +521,23 @@ URL: ${window.location.href}`;
                       <User className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                     )}
                   </div>
-                  {/* 画像アップロードボタン */}
-                  <label className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 bg-bond-pink rounded-full flex items-center justify-center cursor-pointer hover:bg-pink-600 transition-colors shadow-md">
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                      disabled={isUploadingImage}
-                    />
-                    {isUploadingImage ? (
-                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-white animate-spin" />
-                    ) : (
-                      <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                    )}
-                  </label>
+                  {/* 画像アップロードボタン（編集モード時のみ表示） */}
+                  {isEditing && (
+                    <label className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 bg-bond-pink rounded-full flex items-center justify-center cursor-pointer hover:bg-pink-600 transition-colors shadow-md">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={isUploadingImage}
+                      />
+                      {isUploadingImage ? (
+                        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-white animate-spin" />
+                      ) : (
+                        <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                      )}
+                    </label>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground truncate">{personData.name}</h1>

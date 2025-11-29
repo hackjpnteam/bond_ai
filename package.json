@@ -22,6 +22,7 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-table": "^8.21.3",
+    "@tavily/core": "^0.5.13",
     "@types/d3": "^7.4.3",
     "@vercel/blob": "^2.0.0",
     "autoprefixer": "^10.4.21",

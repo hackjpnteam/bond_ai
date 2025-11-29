@@ -377,70 +377,129 @@ export default function DashboardPage() {
 
         {/* 獲得バッジ */}
         <div className="mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5" />
-                獲得バッジ ({achievements.length})
-              </CardTitle>
-              <CardDescription>
-                <Link href="/features#badges" className="text-blue-600 hover:text-blue-700 hover:underline">
-                  バッジ獲得条件を見る →
-                </Link>
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {achievements.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Award className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>まだ獲得したバッジはありません</p>
-                  <Link href="/features#badges" className="text-sm mt-2 text-blue-600 hover:text-blue-700 hover:underline inline-block">
-                    バッジ獲得条件を確認する →
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center shadow-md shadow-orange-200">
+                <Award className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-medium text-gray-900">Badges</h3>
+                <p className="text-xs text-gray-500">{achievements.length} earned</p>
+              </div>
+            </div>
+            <Link
+              href="/features#badges"
+              className="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+            >
+              View all
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+
+          {achievements.length === 0 ? (
+            <Card className="border-dashed border-2 bg-gray-50/50">
+              <CardContent className="py-12">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Award className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <p className="text-gray-500 mb-3">No badges earned yet</p>
+                  <Link
+                    href="/features#badges"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    See how to earn badges
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
                   </Link>
                 </div>
-              ) : (
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
-                  {achievements.map((achievement) => {
-                    // カテゴリー別の背景色
-                    const getCategoryBgColor = (category?: string) => {
-                      switch (category) {
-                        case 'membership': return 'bg-blue-100';
-                        case 'review': return 'bg-purple-100';
-                        case 'quality': return 'bg-green-100';
-                        case 'relationship': return 'bg-orange-100';
-                        case 'network': return 'bg-cyan-100';
-                        case 'special': return 'bg-pink-100';
-                        default: return 'bg-yellow-100';
-                      }
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {achievements.map((achievement) => {
+                // カテゴリー別のグラデーション
+                const getCategoryStyle = (category?: string) => {
+                  switch (category) {
+                    case 'membership': return {
+                      gradient: 'from-blue-400 via-blue-500 to-blue-600',
+                      glow: 'shadow-blue-300/50',
+                      ribbon: 'bg-blue-600'
                     };
+                    case 'review': return {
+                      gradient: 'from-purple-400 via-purple-500 to-purple-600',
+                      glow: 'shadow-purple-300/50',
+                      ribbon: 'bg-purple-600'
+                    };
+                    case 'quality': return {
+                      gradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
+                      glow: 'shadow-emerald-300/50',
+                      ribbon: 'bg-emerald-600'
+                    };
+                    case 'relationship': return {
+                      gradient: 'from-orange-400 via-orange-500 to-orange-600',
+                      glow: 'shadow-orange-300/50',
+                      ribbon: 'bg-orange-600'
+                    };
+                    case 'network': return {
+                      gradient: 'from-cyan-400 via-cyan-500 to-cyan-600',
+                      glow: 'shadow-cyan-300/50',
+                      ribbon: 'bg-cyan-600'
+                    };
+                    case 'special': return {
+                      gradient: 'from-pink-400 via-pink-500 to-pink-600',
+                      glow: 'shadow-pink-300/50',
+                      ribbon: 'bg-pink-600'
+                    };
+                    default: return {
+                      gradient: 'from-amber-400 via-amber-500 to-amber-600',
+                      glow: 'shadow-amber-300/50',
+                      ribbon: 'bg-amber-600'
+                    };
+                  }
+                };
 
-                    return (
-                      <div key={achievement.id} className="text-center">
-                        <div className={`w-16 h-16 ${getCategoryBgColor(achievement.category)} rounded-full flex items-center justify-center mx-auto mb-2 relative`}>
-                          <span className="text-2xl">{achievement.badge}</span>
-                          <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            ✓
-                          </div>
-                        </div>
-                        <p className="text-xs font-medium">{achievement.title}</p>
-                        <p className="text-xs text-gray-500">{achievement.description}</p>
+                const style = getCategoryStyle(achievement.category);
+
+                return (
+                  <div
+                    key={achievement.id}
+                    className="group relative flex flex-col items-center cursor-pointer"
+                    title={achievement.description}
+                  >
+                    {/* メダル本体 */}
+                    <div className={`relative w-16 h-16 rounded-full bg-gradient-to-br ${style.gradient} shadow-lg ${style.glow} group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}>
+                      {/* 光沢エフェクト */}
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/40 via-transparent to-transparent" />
+                      {/* 内側のリング */}
+                      <div className="absolute inset-1.5 rounded-full border-2 border-white/30 flex items-center justify-center">
+                        <span className="text-2xl drop-shadow-sm">{achievement.badge}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      {/* キラキラエフェクト */}
+                      <div className="absolute top-1 right-2 w-2 h-2 bg-white rounded-full opacity-60 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    {/* リボン */}
+                    <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 ${style.ribbon} px-2 py-0.5 rounded-full shadow-md`}>
+                      <span className="text-[10px] font-bold text-white whitespace-nowrap">{achievement.title}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* 統計情報カード */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-ash-muted mb-1">今月の評価</p>
-                  <p className="text-2xl font-bold text-ash-text">
+                  <p className="text-xs text-ash-muted mb-1">今月の評価</p>
+                  <p className="text-xl font-semibold text-ash-text">
                     {(() => {
                       const thisMonth = new Date().getMonth();
                       const thisYear = new Date().getFullYear();
@@ -453,40 +512,40 @@ export default function DashboardPage() {
                     })()}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Star className="w-6 h-6 text-blue-600" />
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Star className="w-5 h-5 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-ash-muted mb-1">平均評価スコア</p>
-                  <p className="text-2xl font-bold text-ash-text">
+                  <p className="text-xs text-ash-muted mb-1">平均評価スコア</p>
+                  <p className="text-xl font-semibold text-ash-text">
                     {evaluatedCompanies.length > 0
                       ? (evaluatedCompanies.reduce((sum, company) => sum + company.averageRating, 0) / evaluatedCompanies.length).toFixed(1)
                       : '0.0'}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-ash-muted mb-1">評価企業数</p>
-                  <p className="text-2xl font-bold text-ash-text">{evaluatedCompanies.length}</p>
+                  <p className="text-xs text-ash-muted mb-1">評価企業数</p>
+                  <p className="text-xl font-semibold text-ash-text">{evaluatedCompanies.length}</p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-purple-600" />
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -498,9 +557,9 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* 最近の活動 */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <Activity className="w-4 h-4 text-gray-500" />
                   最近の活動
                 </CardTitle>
               </CardHeader>
@@ -582,10 +641,10 @@ export default function DashboardPage() {
 
             {/* 評価した企業 */}
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-2 text-base font-medium">
+                    <Building2 className="w-4 h-4 text-gray-500" />
                     評価した企業
                   </CardTitle>
                   <Link href="/search">
@@ -645,9 +704,9 @@ export default function DashboardPage() {
 
             {/* 検索履歴 */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <Activity className="w-4 h-4 text-gray-500" />
                   検索履歴
                 </CardTitle>
               </CardHeader>
@@ -693,9 +752,9 @@ export default function DashboardPage() {
           <div className="space-y-6">
             {/* クイックアクション */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PlusCircle className="w-5 h-5" />
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <PlusCircle className="w-4 h-4 text-gray-500" />
                   クイックアクション
                 </CardTitle>
               </CardHeader>
@@ -729,9 +788,9 @@ export default function DashboardPage() {
 
             {/* 統計カード */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <BarChart3 className="w-4 h-4 text-gray-500" />
                   あなたの統計
                 </CardTitle>
               </CardHeader>
@@ -768,126 +827,9 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* おすすめ企業 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  おすすめ企業
-                </CardTitle>
-                <CardDescription>
-                  {recommendationAnalysis?.message || 'あなたの評価傾向に基づく'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingRecommendations ? (
-                  <div className="text-center py-4 text-ash-muted">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                    <p className="text-sm">評価傾向を分析中...</p>
-                  </div>
-                ) : recommendations.length > 0 ? (
-                  <div className="space-y-3">
-                    {recommendations.slice(0, 3).map((company, index) => (
-                      <Link
-                        key={company.slug}
-                        href={`/search?q=${encodeURIComponent(company.name)}`}
-                        className="block p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-ash-text truncate">{company.name}</p>
-                            <p className="text-xs text-ash-muted truncate">{company.industry}</p>
-                          </div>
-                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                            <span className="text-xs font-medium">{company.averageRating?.toFixed(1) || '-'}</span>
-                          </div>
-                        </div>
-                        <p className="text-xs text-blue-600 mt-1">{company.matchReason}</p>
-                      </Link>
-                    ))}
-                    {recommendationAnalysis?.preferredIndustries?.length > 0 && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <p className="text-xs text-ash-muted mb-1">関心が高い業界:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {recommendationAnalysis.preferredIndustries.slice(0, 3).map((ind: any) => (
-                            <Badge key={ind.name} variant="secondary" className="text-xs">
-                              {ind.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : evaluatedCompanies.length > 0 ? (
-                  <div className="text-center py-4 text-ash-muted">
-                    <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">おすすめ企業を準備中...</p>
-                    <p className="text-xs">より多くの企業を評価するとおすすめが表示されます</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-ash-muted">
-                    <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">まだおすすめできる企業がありません</p>
-                    <Link href="/search">
-                      <Button size="sm" className="mt-2">
-                        企業を評価する
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* おすすめ企業 - 一時的に非表示 */}
 
-            {/* 実績バッジ */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="w-5 h-5" />
-                  獲得バッジ
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {achievements.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500">
-                    <Award className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">まだバッジがありません</p>
-                    <Link href="/features#badges" className="text-xs text-blue-600 hover:text-blue-700 hover:underline mt-1 inline-block">
-                      獲得条件を見る
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {achievements.slice(0, 6).map((achievement) => {
-                      // カテゴリー別のスタイル
-                      const getCategoryStyle = (category?: string) => {
-                        switch (category) {
-                          case 'membership': return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' };
-                          case 'review': return { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' };
-                          case 'quality': return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' };
-                          case 'relationship': return { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' };
-                          case 'network': return { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700' };
-                          case 'special': return { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-700' };
-                          default: return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700' };
-                        }
-                      };
-
-                      const style = getCategoryStyle(achievement.category);
-                      return (
-                        <div
-                          key={achievement.id}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full ${style.bg} border ${style.border}`}
-                          title={achievement.description}
-                        >
-                          <span className="text-base">{achievement.badge}</span>
-                          <span className={`text-xs font-medium ${style.text} whitespace-nowrap`}>{achievement.title}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* 実績バッジ - 一時的に非表示 */}
           </div>
         </div>
 

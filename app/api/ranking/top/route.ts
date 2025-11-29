@@ -29,7 +29,7 @@ export async function GET() {
         }
       },
       {
-        $sort: { weightedScore: -1, reviewCount: -1, averageRating: -1 }
+        $sort: { reviewCount: -1, weightedScore: -1, averageRating: -1 }
       },
       {
         $limit: 3

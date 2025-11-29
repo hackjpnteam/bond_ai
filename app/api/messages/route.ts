@@ -91,13 +91,18 @@ export async function POST(request: NextRequest) {
     let recipient = null
     const senderId = new mongoose.Types.ObjectId(authUser.id)
 
+    console.log('[Messages API] Creating message:', { recipientId, recipientUsername, conversationId })
+
     // 受信者を特定
     if (conversationId) {
       // 会話IDから受信者を特定
+      console.log('[Messages API] Looking up by conversationId:', conversationId)
       recipient = await User.findById(conversationId)
     } else if (recipientId) {
+      console.log('[Messages API] Looking up by recipientId:', recipientId)
       recipient = await User.findById(recipientId)
     } else if (recipientUsername) {
+      console.log('[Messages API] Looking up by recipientUsername:', recipientUsername)
       // ユーザー名から受信者を特定
       if (recipientUsername === 'tomura' || recipientUsername === 'hikaru') {
         recipient = await User.findOne({
@@ -124,8 +129,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!recipient) {
+      console.log('[Messages API] Recipient not found')
       return NextResponse.json({ error: 'Recipient not found' }, { status: 404 })
     }
+    console.log('[Messages API] Found recipient:', recipient.name, recipient._id)
 
     if (recipient._id.toString() === senderId.toString()) {
       return NextResponse.json({ error: 'Cannot send message to yourself' }, { status: 400 })

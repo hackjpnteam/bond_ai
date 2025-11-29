@@ -79,37 +79,39 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
       }
     ])
 
-    // 会話データを整形
-    const formattedConversations = conversations.map(conv => ({
-      _id: conv._id.toString(),
-      participants: [
-        {
-          _id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image
-        },
-        {
-          _id: conv.otherUser[0]._id.toString(),
-          name: conv.otherUser[0].name,
-          email: conv.otherUser[0].email,
-          image: conv.otherUser[0].image
-        }
-      ],
-      lastMessage: conv.lastMessage ? {
-        content: conv.lastMessage.content,
-        sender: {
-          _id: conv.lastMessage.sender._id.toString(),
-          name: conv.lastMessage.sender.name,
-          email: conv.lastMessage.sender.email,
-          image: conv.lastMessage.sender.image
-        },
-        createdAt: conv.lastMessage.createdAt,
-        read: conv.lastMessage.read
-      } : undefined,
-      unreadCount: conv.unreadCount,
-      updatedAt: conv.updatedAt
-    }))
+    // 会話データを整形（otherUserが見つからない場合はスキップ）
+    const formattedConversations = conversations
+      .filter(conv => conv.otherUser && conv.otherUser.length > 0)
+      .map(conv => ({
+        _id: conv._id.toString(),
+        participants: [
+          {
+            _id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image
+          },
+          {
+            _id: conv.otherUser[0]._id.toString(),
+            name: conv.otherUser[0].name,
+            email: conv.otherUser[0].email,
+            image: conv.otherUser[0].image
+          }
+        ],
+        lastMessage: conv.lastMessage ? {
+          content: conv.lastMessage.content,
+          sender: conv.lastMessage.sender ? {
+            _id: conv.lastMessage.sender._id.toString(),
+            name: conv.lastMessage.sender.name,
+            email: conv.lastMessage.sender.email,
+            image: conv.lastMessage.sender.image
+          } : null,
+          createdAt: conv.lastMessage.createdAt,
+          read: conv.lastMessage.read
+        } : undefined,
+        unreadCount: conv.unreadCount,
+        updatedAt: conv.updatedAt
+      }))
 
     return NextResponse.json({
       success: true,

@@ -4,22 +4,23 @@ import { HeroSection } from "@/components/HeroSection";
 // import { BondTestimonials } from "@/components/BondTestimonials";
 import Link from "next/link";
 import { TopCompaniesHighlight } from "@/components/TopCompaniesHighlight";
+import { TrustMapDemo } from "@/components/TrustMapDemo";
 
 const conceptHighlights = [
   {
     icon: '🤝',
-    title: '検証済みの信頼ネットワーク',
-    description: '共通の知人や評価データから「安全な出会い」を保証。'
+    title: '信頼ネットワークで安全にアプローチ',
+    description: '共通の知人・過去の取引・評価データから、\n安心して会える相手だけを抽出。'
   },
   {
     icon: '💬',
-    title: '口コミ型の信頼スコア',
-    description: '実際の取引・勤務・顧客体験に基づいたリアルなフィードバック。'
+    title: '口コミベースの信頼スコア',
+    description: '実際の取引・勤務・顧客体験から生まれる\nリアルな"評判の見える化"。'
   },
   {
     icon: '⚙️',
-    title: 'AIによる最適ルート提案',
-    description: '「この会社と会うなら、まずこの人を通すと良い」を自動で可視化。'
+    title: 'AIが最短ルートを提案',
+    description: '「この企業に行くなら、まずこの人を経由すると早い」\n最適な紹介ルートを自動で表示。'
   }
 ]
 
@@ -48,7 +49,7 @@ export default function Page() {
                 <div className="text-2xl md:text-3xl">{item.icon}</div>
                 <div className="space-y-1 md:space-y-2">
                   <h3 className="text-base md:text-lg font-semibold">{item.title}</h3>
-                  <p className="text-xs md:text-sm leading-relaxed text-ash-muted">
+                  <p className="text-xs md:text-sm leading-relaxed text-ash-muted whitespace-pre-line">
                     {item.description}
                   </p>
                 </div>
@@ -58,6 +59,9 @@ export default function Page() {
         </div>
       </section>
 
+      {/* Trust Map Demo */}
+      <TrustMapDemo />
+
       {/* Use Case Section */}
       <section id="use-case" className="section py-10 md:py-16 bg-gradient-to-b from-ash-surface/30 to-white">
         <div className="container-narrow mx-auto px-3 md:px-4">
@@ -65,54 +69,80 @@ export default function Page() {
             <h2 className="mb-4 md:mb-6 text-xl sm:text-2xl md:text-3xl">さまざまなビジネスシーンで</h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto">
-            {/* Use Case 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
+            {/* Use Case 1 - VC・投資家 */}
+            <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-start gap-3 md:gap-4">
+                <div className="text-2xl md:text-3xl flex-shrink-0">🚀</div>
+                <div>
+                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">VC・投資家</h3>
+                  <p className="text-xs md:text-sm leading-relaxed">
+                    どの投資家が誰を紹介し、どんな観点で投資したかが一目でわかる。起業家の"信用背景"まで可視化され、投資判断が速く・正確に。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Use Case 2 - 人材紹介・エージェント */}
+            <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-start gap-3 md:gap-4">
+                <div className="text-2xl md:text-3xl flex-shrink-0">🧑‍💼</div>
+                <div>
+                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">人材紹介・エージェント</h3>
+                  <p className="text-xs md:text-sm leading-relaxed">
+                    候補者・企業・紹介者のつながりを可視化。「誰が推薦しているか」がわかるから、決定率が上がる。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Use Case 3 - 士業 */}
+            <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-start gap-3 md:gap-4">
+                <div className="text-2xl md:text-3xl flex-shrink-0">⚖️</div>
+                <div>
+                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">士業（税理士・弁護士・社労士・コンサル）</h3>
+                  <p className="text-xs md:text-sm leading-relaxed">
+                    紹介者・実績・評価をまとめて信頼プロフィール化。初回相談前から "この先生なら安心" を伝えられる。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Use Case 4 - M&A仲介 */}
+            <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-start gap-3 md:gap-4">
+                <div className="text-2xl md:text-3xl flex-shrink-0">🤝</div>
+                <div>
+                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">M&A仲介</h3>
+                  <p className="text-xs md:text-sm leading-relaxed">
+                    売り手・買い手・仲介者の信頼関係がひと目でわかる。リスクの高い交渉を、信頼データで安全に進められる。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Use Case 5 - 不動産営業 */}
+            <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-start gap-3 md:gap-4">
+                <div className="text-2xl md:text-3xl flex-shrink-0">🏡</div>
+                <div>
+                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">不動産営業</h3>
+                  <p className="text-xs md:text-sm leading-relaxed">
+                    過去顧客・紹介者・共通の知人がつながる顧客マップ。紹介が自然に生まれ、初回から信頼で商談が始まる。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Use Case 6 - BtoB営業 */}
             <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
               <div className="flex items-start gap-3 md:gap-4">
                 <div className="text-2xl md:text-3xl flex-shrink-0">💼</div>
                 <div>
-                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">M&A仲介に</h3>
+                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">BtoB営業（SaaS / ITツール / 受託開発）</h3>
                   <p className="text-xs md:text-sm leading-relaxed">
-                    売り手・買い手・仲介人の信頼関係を可視化し、交渉のリスクを最小化。
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Use Case 2 */}
-            <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
-              <div className="flex items-start gap-3 md:gap-4">
-                <div className="text-2xl md:text-3xl flex-shrink-0">💰</div>
-                <div>
-                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">VC・投資家に</h3>
-                  <p className="text-xs md:text-sm leading-relaxed">
-                    起業家・スタートアップの実績と信頼スコアを一目で確認。"紹介経路"まで明確に。
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Use Case 3 */}
-            <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
-              <div className="flex items-start gap-3 md:gap-4">
-                <div className="text-2xl md:text-3xl flex-shrink-0">🏠</div>
-                <div>
-                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">不動産営業に</h3>
-                  <p className="text-xs md:text-sm leading-relaxed">
-                    成約率を上げる「信頼でつながる顧客マップ」。共通の知人経由で自然な紹介が生まれる。
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Use Case 4 */}
-            <div className="card p-4 md:p-6 hover:shadow-lg transition-all duration-300">
-              <div className="flex items-start gap-3 md:gap-4">
-                <div className="text-2xl md:text-3xl flex-shrink-0">🩺</div>
-                <div>
-                  <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">保険営業に</h3>
-                  <p className="text-xs md:text-sm leading-relaxed">
-                    口コミベースで「紹介されやすい営業担当」を可視化。信頼を軸にした営業スタイルを実現。
+                    共通の投資家・知人・顧客が一目でわかる。寒いアウトバウンドではなく"信頼起点の営業"ができる。
                   </p>
                 </div>
               </div>

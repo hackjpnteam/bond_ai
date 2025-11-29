@@ -115,13 +115,17 @@ export default function ChatMessagesPage() {
 
   const fetchConversations = async () => {
     try {
+      console.log('[Messages] Fetching conversations...')
       const response = await fetch('/api/conversations', {
         credentials: 'include'
       })
 
       if (response.ok) {
         const data = await response.json()
+        console.log('[Messages] Conversations fetched:', data.conversations?.length || 0)
         setConversations(data.conversations || [])
+      } else {
+        console.error('[Messages] Failed to fetch conversations:', response.status)
       }
     } catch (error) {
       console.error('Error fetching conversations:', error)

@@ -132,8 +132,9 @@ export function TopCompaniesHighlight() {
                 <span className="text-ash-muted text-xs md:text-sm font-medium">{score.toFixed(1)}</span>
                 <span className="text-xs text-ash-muted">× {company.reviewCount.toLocaleString()}</span>
               </div>
-              <div className="text-xs text-ash-muted mt-1">
-                スコア: <span className="font-semibold text-ash-text">{company.weightedScore.toFixed(1)}</span>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs text-ash-muted">信頼スコア:</span>
+                <span className="text-sm font-bold text-green-600">{company.weightedScore.toFixed(0)}pts</span>
               </div>
             <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t flex items-center justify-between">
               <Link

@@ -203,16 +203,36 @@ export default function ServicePage() {
   };
 
   useEffect(() => {
-    // Check if saved
-    const savedItems = localStorage.getItem('bond_saved_items');
-    if (savedItems) {
+    // Check if saved from API
+    const checkSavedStatus = async () => {
       try {
-        const items = JSON.parse(savedItems);
-        setIsSaved(items.includes(serviceName.toLowerCase()));
+        const response = await fetch('/api/saved-items?type=service', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.savedItems) {
+            const isSavedInApi = data.savedItems.some(
+              (item: any) => item.itemData.slug === serviceName.toLowerCase() ||
+                            item.itemData.name.toLowerCase() === serviceName.toLowerCase()
+            );
+            setIsSaved(isSavedInApi);
+          }
+        }
       } catch (e) {
-        console.error('Error parsing saved items:', e);
+        // Fallback to localStorage
+        const savedItems = localStorage.getItem('bond_saved_items');
+        if (savedItems) {
+          try {
+            const items = JSON.parse(savedItems);
+            setIsSaved(items.includes(serviceName.toLowerCase()));
+          } catch (e) {
+            console.error('Error parsing saved items:', e);
+          }
+        }
       }
-    }
+    };
+    checkSavedStatus();
 
     const loadServiceData = async () => {
       // APIから企業データを取得（サービスも同じAPIを使用）
@@ -722,26 +742,105 @@ export default function ServicePage() {
     }
   };
 
-  const handleSave = () => {
-    const savedItems = localStorage.getItem('bond_saved_items');
-    let items: string[] = [];
+  const handleSave = async () => {
+    if (!currentUser) {
+      alert('保存するにはログインしてください');
+      return;
+    }
 
     try {
-      if (savedItems) {
-        items = JSON.parse(savedItems);
+      if (isSaved) {
+        // APIから削除（savedItemIdが必要）
+        // ローカルストレージからも削除
+        const savedItems = localStorage.getItem('bond_saved_items');
+        if (savedItems) {
+          const items = JSON.parse(savedItems);
+          const filteredItems = items.filter((item: string) => item !== serviceName.toLowerCase());
+          localStorage.setItem('bond_saved_items', JSON.stringify(filteredItems));
+        }
+        setIsSaved(false);
+      } else {
+        // 概要を取得（検索結果から抽出、またはserviceDataのdescriptionを使用）
+        let summaryDescription = '';
+
+        // searchResultsから概要を抽出
+        if (searchResults && searchResults.length > 0) {
+          const firstResult = searchResults[0];
+          if (firstResult.answer) {
+            // Markdownから概要セクションを抽出
+            const overviewMatch = firstResult.answer.match(/##\s*1\.\s*概要\s*\n([\s\S]*?)(?=\n##\s*2\.|$)/i);
+            if (overviewMatch) {
+              summaryDescription = overviewMatch[1]
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\n+/g, ' ')
+                .trim()
+                .substring(0, 500);
+            } else {
+              // 概要セクションがない場合は最初の段落を使用
+              const firstParagraph = firstResult.answer
+                .split('\n')
+                .filter((line: string) => line.trim().length > 20 && !line.startsWith('#') && !line.startsWith('*'))
+                .slice(0, 2)
+                .join(' ')
+                .substring(0, 500);
+              summaryDescription = firstParagraph;
+            }
+          }
+        }
+
+        // searchResultsがない場合はserviceDataのdescriptionを使用
+        if (!summaryDescription && serviceData?.description) {
+          // Markdownから概要セクションを抽出
+          const overviewMatch = serviceData.description.match(/##\s*1\.\s*概要\s*\n([\s\S]*?)(?=\n##\s*2\.|$)/i);
+          if (overviewMatch) {
+            summaryDescription = overviewMatch[1]
+              .replace(/\*\*(.*?)\*\*/g, '$1')
+              .replace(/\n+/g, ' ')
+              .trim()
+              .substring(0, 500);
+          } else {
+            summaryDescription = serviceData.description.substring(0, 500);
+          }
+        }
+
+        // APIに保存
+        const response = await fetch('/api/saved-items', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            itemType: 'service',
+            itemData: {
+              name: serviceData?.name || serviceName,
+              slug: serviceName.toLowerCase(),
+              description: summaryDescription
+            }
+          })
+        });
+
+        if (response.ok) {
+          // ローカルストレージにも保存
+          const savedItems = localStorage.getItem('bond_saved_items');
+          let items: string[] = [];
+          if (savedItems) {
+            items = JSON.parse(savedItems);
+          }
+          items.push(serviceName.toLowerCase());
+          localStorage.setItem('bond_saved_items', JSON.stringify(items));
+          setIsSaved(true);
+        } else if (response.status === 409) {
+          // 既に保存済み
+          setIsSaved(true);
+        } else {
+          const data = await response.json();
+          console.error('Save error:', data.error);
+        }
       }
-    } catch (e) {
-      console.error('Error parsing saved items:', e);
+    } catch (error) {
+      console.error('Error saving item:', error);
     }
-
-    if (isSaved) {
-      items = items.filter(item => item !== serviceName.toLowerCase());
-    } else {
-      items.push(serviceName.toLowerCase());
-    }
-
-    localStorage.setItem('bond_saved_items', JSON.stringify(items));
-    setIsSaved(!isSaved);
   };
 
   const handleEditEvaluation = (evaluation: Evaluation) => {

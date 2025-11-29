@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/lib/auth';
+import { usePathname } from 'next/navigation';
 import TopNav from '@/components/TopNav';
 import AsideNav from '@/components/AsideNav';
 import Footer from '@/components/Footer';
@@ -10,8 +11,13 @@ interface LayoutWrapperProps {
   children: React.ReactNode;
 }
 
+// フッターを非表示にするパス
+const noFooterPaths = ['/search'];
+
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const { user, isLoading } = useAuth();
+  const pathname = usePathname();
+  const hideFooter = noFooterPaths.includes(pathname);
 
   if (isLoading) {
     return (
@@ -43,9 +49,11 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
           <OnboardingBanner />
           {children}
         </main>
-        <div className="lg:ml-64">
-          <Footer />
-        </div>
+        {!hideFooter && (
+          <div className="lg:ml-64">
+            <Footer />
+          </div>
+        )}
       </div>
     );
   }
@@ -57,7 +65,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
       <main className="flex-1 pt-24">
         {children}
       </main>
-      <Footer />
+      {!hideFooter && <Footer />}
     </div>
   );
 }

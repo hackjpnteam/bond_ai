@@ -13,6 +13,7 @@ import { getRelationshipLabel, RELATIONSHIP_OPTIONS, RELATIONSHIP_TYPES } from '
 import { CompanyOverview } from '@/components/company/CompanyOverview';
 import EditEvaluationModal from '@/components/EditEvaluationModal';
 import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
 
 interface Reply {
   userId: string;
@@ -204,16 +205,36 @@ export default function CompanyPage() {
   };
 
   useEffect(() => {
-    // Check if saved
-    const savedItems = localStorage.getItem('bond_saved_items');
-    if (savedItems) {
+    // Check if saved from API
+    const checkSavedStatus = async () => {
       try {
-        const items = JSON.parse(savedItems);
-        setIsSaved(items.includes(companyName.toLowerCase()));
+        const response = await fetch('/api/saved-items?type=company', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.savedItems) {
+            const isSavedInApi = data.savedItems.some(
+              (item: any) => item.itemData.slug === companyName.toLowerCase() ||
+                            item.itemData.name.toLowerCase() === companyName.toLowerCase()
+            );
+            setIsSaved(isSavedInApi);
+          }
+        }
       } catch (e) {
-        console.error('Error parsing saved items:', e);
+        // Fallback to localStorage
+        const savedItems = localStorage.getItem('bond_saved_items');
+        if (savedItems) {
+          try {
+            const items = JSON.parse(savedItems);
+            setIsSaved(items.includes(companyName.toLowerCase()));
+          } catch (e) {
+            console.error('Error parsing saved items:', e);
+          }
+        }
       }
-    }
+    };
+    checkSavedStatus();
 
     const loadCompanyData = async () => {
       // 人物データかどうかを先にチェック - 存在する場合は /person/ にリダイレクト
@@ -570,8 +591,12 @@ export default function CompanyPage() {
         const finalEmployees = isPlaceholder(companyApiData.employees) ? extractedEmployees : companyApiData.employees;
         const finalWebsite = isPlaceholder(companyApiData.website) ? extractedWebsiteUrl : companyApiData.website;
         const finalIndustry = isPlaceholder(companyApiData.industry) ? extractedIndustry : companyApiData.industry;
-        // sourcesも検索結果から抽出したものがなければMongoDBから取得
-        const finalSources = extractedSources.length > 0 ? extractedSources : (companyApiData.sources || []);
+        // sourcesはMongoDBから取得したもの（ニュースAPI経由）を優先
+        // extractedSourcesは検索結果からの抽出で、内部URLが含まれる可能性がある
+        const dbSources = companyApiData.sources || [];
+        const finalSources = dbSources.length > 0 ? dbSources : extractedSources.filter(s =>
+          s.url && !s.url.includes('localhost') && !s.url.includes('bond-ai')
+        );
 
         setCompanyData({
           name: companyApiData.name,
@@ -911,11 +936,44 @@ export default function CompanyPage() {
         await navigator.share(shareData);
       } else {
         // フォールバック: クリップボードにコピー
-        await navigator.clipboard.writeText(window.location.href);
-        alert('URLをクリップボードにコピーしました');
+        await copyToClipboard(window.location.href);
       }
     } catch (error) {
       console.error('Error sharing:', error);
+      // シェアがキャンセルされた場合は何もしない
+      if ((error as Error).name !== 'AbortError') {
+        await copyToClipboard(window.location.href);
+      }
+    }
+  };
+
+  // クリップボードにコピー（フォールバック付き）
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        toast.success('URLをコピーしました');
+      } else {
+        // フォールバック: 古い方法
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          toast.success('URLをコピーしました');
+        } catch (err) {
+          toast.error('コピーに失敗しました');
+        }
+        textArea.remove();
+      }
+    } catch (error) {
+      console.error('Clipboard error:', error);
+      toast.error('コピーに失敗しました');
     }
   };
 
@@ -971,28 +1029,105 @@ export default function CompanyPage() {
   };
 
   // 保存機能
-  const handleSave = () => {
-    const savedItems = localStorage.getItem('bond_saved_items');
-    let items: string[] = [];
-    
+  const handleSave = async () => {
+    if (!currentUser) {
+      alert('保存するにはログインしてください');
+      return;
+    }
+
     try {
-      if (savedItems) {
-        items = JSON.parse(savedItems);
+      if (isSaved) {
+        // APIから削除（savedItemIdが必要）
+        // ローカルストレージからも削除
+        const savedItems = localStorage.getItem('bond_saved_items');
+        if (savedItems) {
+          const items = JSON.parse(savedItems);
+          const filteredItems = items.filter((item: string) => item !== companyName.toLowerCase());
+          localStorage.setItem('bond_saved_items', JSON.stringify(filteredItems));
+        }
+        setIsSaved(false);
+      } else {
+        // 概要を取得（検索結果から抽出、またはcompanyDataのdescriptionを使用）
+        let summaryDescription = '';
+
+        // searchResultsから概要を抽出
+        if (searchResults && searchResults.length > 0) {
+          const firstResult = searchResults[0];
+          if (firstResult.content) {
+            // Markdownから概要セクションを抽出
+            const overviewMatch = firstResult.content.match(/##\s*1\.\s*概要\s*\n([\s\S]*?)(?=\n##\s*2\.|$)/i);
+            if (overviewMatch) {
+              summaryDescription = overviewMatch[1]
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\n+/g, ' ')
+                .trim()
+                .substring(0, 500);
+            } else {
+              // 概要セクションがない場合は最初の段落を使用
+              const firstParagraph = firstResult.content
+                .split('\n')
+                .filter((line: string) => line.trim().length > 20 && !line.startsWith('#') && !line.startsWith('*'))
+                .slice(0, 2)
+                .join(' ')
+                .substring(0, 500);
+              summaryDescription = firstParagraph;
+            }
+          }
+        }
+
+        // searchResultsがない場合はcompanyDataのdescriptionを使用
+        if (!summaryDescription && companyData?.description) {
+          // Markdownから概要セクションを抽出
+          const overviewMatch = companyData.description.match(/##\s*1\.\s*概要\s*\n([\s\S]*?)(?=\n##\s*2\.|$)/i);
+          if (overviewMatch) {
+            summaryDescription = overviewMatch[1]
+              .replace(/\*\*(.*?)\*\*/g, '$1')
+              .replace(/\n+/g, ' ')
+              .trim()
+              .substring(0, 500);
+          } else {
+            summaryDescription = companyData.description.substring(0, 500);
+          }
+        }
+
+        // APIに保存
+        const response = await fetch('/api/saved-items', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            itemType: 'company',
+            itemData: {
+              name: companyData?.name || companyName,
+              slug: companyName.toLowerCase(),
+              description: summaryDescription
+            }
+          })
+        });
+
+        if (response.ok) {
+          // ローカルストレージにも保存
+          const savedItems = localStorage.getItem('bond_saved_items');
+          let items: string[] = [];
+          if (savedItems) {
+            items = JSON.parse(savedItems);
+          }
+          items.push(companyName.toLowerCase());
+          localStorage.setItem('bond_saved_items', JSON.stringify(items));
+          setIsSaved(true);
+        } else if (response.status === 409) {
+          // 既に保存済み
+          setIsSaved(true);
+        } else {
+          const data = await response.json();
+          console.error('Save error:', data.error);
+        }
       }
-    } catch (e) {
-      console.error('Error parsing saved items:', e);
+    } catch (error) {
+      console.error('Error saving item:', error);
     }
-
-    if (isSaved) {
-      // 保存から削除
-      items = items.filter(item => item !== companyName.toLowerCase());
-    } else {
-      // 保存に追加
-      items.push(companyName.toLowerCase());
-    }
-
-    localStorage.setItem('bond_saved_items', JSON.stringify(items));
-    setIsSaved(!isSaved);
   };
 
   // 評価編集ハンドラ
@@ -1646,21 +1781,51 @@ URL: ${window.location.href}`;
 
               {/* 検索結果インサイト - 非表示 */}
 
-              {/* 参考サイト */}
-              {companyData.sources && companyData.sources.length > 0 && (
-                <Card className="overflow-hidden">
-                  <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <Search className="w-4 h-4 sm:w-5 sm:h-5" />
-                      参考サイト
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      この企業情報の作成時に参照したウェブサイト
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
-                    <div className="space-y-2 sm:space-y-3">
-                      {companyData.sources.slice(0, 10).map((source, index) => (
+              {/* 参考サイト・ニュース */}
+              <Card className="overflow-hidden">
+                <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                        <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                        参考サイト・ニュース
+                      </CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        この企業に関する最新ニュースと参考情報
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`/api/companies/${encodeURIComponent(companyName)}/news`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ force: true })
+                          });
+                          if (response.ok) {
+                            const data = await response.json();
+                            alert(`${data.newSourcesCount || 0}件の新しいニュースを取得しました`);
+                            window.location.reload();
+                          } else {
+                            alert('ニュースの取得に失敗しました');
+                          }
+                        } catch (error) {
+                          console.error('News fetch error:', error);
+                          alert('ニュースの取得に失敗しました');
+                        }
+                      }}
+                      className="text-xs"
+                    >
+                      最新ニュースを取得
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
+                  {companyData.sources && companyData.sources.length > 0 ? (
+                    <div className="space-y-2 sm:space-y-3 max-h-[600px] overflow-y-auto">
+                      {companyData.sources.map((source, index) => (
                         <div key={index} className="border border-border rounded-lg p-2 sm:p-3 hover:bg-muted/50 transition-colors">
                           <a
                             href={source.url}
@@ -1677,25 +1842,35 @@ URL: ${window.location.href}`;
                                 <p className="text-xs text-gray-600 truncate mt-0.5">
                                   {source.url}
                                 </p>
-                                {source.published_at && (
-                                  <p className="text-xs text-gray-600 mt-1">
-                                    {source.published_at}
-                                  </p>
-                                )}
+                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                                  {source.published_at && (
+                                    <span>公開: {source.published_at}</span>
+                                  )}
+                                  <span>
+                                    取得: {source.fetched_at
+                                      ? new Date(source.fetched_at).toLocaleDateString('ja-JP')
+                                      : '不明'}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </a>
                         </div>
                       ))}
                     </div>
-                    {companyData.sources.length > 10 && (
-                      <p className="text-xs sm:text-sm text-gray-600 mt-3 text-center">
-                        他 {companyData.sources.length - 10} 件のソース
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <p className="text-sm">まだ参考サイトがありません</p>
+                      <p className="text-xs mt-1">「最新ニュースを取得」ボタンで取得できます</p>
+                    </div>
+                  )}
+                  {companyData.sources && companyData.sources.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-3 text-center">
+                      全 {companyData.sources.length} 件
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* 評価一覧 */}
               <Card className="overflow-hidden">
@@ -1932,6 +2107,10 @@ URL: ${window.location.href}`;
                           onClick={() => {
                             console.log('評価投稿ボタンがクリックされました');
                             setShowEvaluationForm(true);
+                            // 評価フォームにスクロール
+                            setTimeout(() => {
+                              document.getElementById('evaluation-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 100);
                           }}
                         >
                           評価を投稿する
@@ -1946,7 +2125,7 @@ URL: ${window.location.href}`;
             {/* サイドバー */}
             <div className="space-y-4 sm:space-y-6">
               {/* 評価投稿フォーム */}
-              <Card className="overflow-hidden">
+              <Card id="evaluation-form" className="overflow-hidden">
                 <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
                   <CardTitle className="text-base sm:text-lg">評価を投稿</CardTitle>
                 </CardHeader>
@@ -2081,7 +2260,7 @@ URL: ${window.location.href}`;
                           <div className="flex items-start gap-3">
                             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                               <img
-                                src={`/api/company-logo/${encodeURIComponent(company.slug)}`}
+                                src={`/api/company-logo/${encodeURIComponent(company.slug || company.name.replace(/^株式会社/, '').trim().toLowerCase())}`}
                                 alt={`${company.name} ロゴ`}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {

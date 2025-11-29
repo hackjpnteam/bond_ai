@@ -3,7 +3,7 @@ import mongoose, { Document, Model, Schema } from 'mongoose';
 export interface ISearchHistory extends Document {
   userId: mongoose.Types.ObjectId;
   query: string;
-  mode: 'company' | 'person';
+  mode: 'company' | 'person' | 'service';
   results?: any;
   createdAt: Date;
 }
@@ -23,7 +23,7 @@ const SearchHistorySchema: Schema<ISearchHistory> = new Schema({
   },
   mode: {
     type: String,
-    enum: ['company', 'person'],
+    enum: ['company', 'person', 'service'],
     required: true
   },
   results: {

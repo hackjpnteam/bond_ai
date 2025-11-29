@@ -20,7 +20,9 @@ export interface ICompany extends Document {
     url: string;
     title?: string;
     published_at?: string;
+    fetched_at?: Date;
   }>;
+  lastNewsFetchAt?: Date;
   editHistory?: Array<{
     field: string;
     oldValue: string;
@@ -113,8 +115,12 @@ const CompanySchema: Schema<ICompany> = new Schema({
   sources: [{
     url: { type: String, required: true },
     title: { type: String },
-    published_at: { type: String }
+    published_at: { type: String },
+    fetched_at: { type: Date, default: Date.now }
   }],
+  lastNewsFetchAt: {
+    type: Date
+  },
   editHistory: [{
     field: { type: String, required: true },
     oldValue: { type: String, required: true },

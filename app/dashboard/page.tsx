@@ -38,6 +38,9 @@ export default function DashboardPage() {
   const [searchHistory, setSearchHistory] = useState<any[]>([])
   const [connectionCount, setConnectionCount] = useState(0)
   const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [recommendations, setRecommendations] = useState<any[]>([])
+  const [recommendationAnalysis, setRecommendationAnalysis] = useState<any>(null)
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true)
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -158,12 +161,33 @@ export default function DashboardPage() {
       }
     };
 
+    // おすすめ企業を取得（評価傾向分析）
+    const loadRecommendations = async () => {
+      try {
+        setIsLoadingRecommendations(true);
+        const response = await fetch('/api/recommendations', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setRecommendations(data.recommendations || []);
+            setRecommendationAnalysis(data.analysis || null);
+          }
+        }
+      } catch (e) {
+        console.error('Error loading recommendations:', e);
+      } finally {
+        setIsLoadingRecommendations(false);
+      }
+    };
+
     const loadData = async () => {
       if (user) {
         setIsLoadingData(true);
         setError(null);
         try {
-          await Promise.all([loadEvaluationHistory(), loadSearchHistory(), loadConnectionCount(), loadAchievements()]);
+          await Promise.all([loadEvaluationHistory(), loadSearchHistory(), loadConnectionCount(), loadAchievements(), loadRecommendations()]);
         } catch (e) {
           console.error('Error loading dashboard data:', e);
           setError('データの読み込みに失敗しました');
@@ -752,17 +776,54 @@ export default function DashboardPage() {
                   おすすめ企業
                 </CardTitle>
                 <CardDescription>
-                  あなたの評価傾向に基づく
+                  {recommendationAnalysis?.message || 'あなたの評価傾向に基づく'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {evaluatedCompanies.length > 0 ? (
+                {isLoadingRecommendations ? (
+                  <div className="text-center py-4 text-ash-muted">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-sm">評価傾向を分析中...</p>
+                  </div>
+                ) : recommendations.length > 0 ? (
                   <div className="space-y-3">
-                    <div className="text-center py-4 text-ash-muted">
-                      <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">評価傾向を分析中...</p>
-                      <p className="text-xs">より多くの企業を評価するとおすすめが表示されます</p>
-                    </div>
+                    {recommendations.slice(0, 3).map((company, index) => (
+                      <Link
+                        key={company.slug}
+                        href={`/search?q=${encodeURIComponent(company.name)}`}
+                        className="block p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-ash-text truncate">{company.name}</p>
+                            <p className="text-xs text-ash-muted truncate">{company.industry}</p>
+                          </div>
+                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                            <span className="text-xs font-medium">{company.averageRating?.toFixed(1) || '-'}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1">{company.matchReason}</p>
+                      </Link>
+                    ))}
+                    {recommendationAnalysis?.preferredIndustries?.length > 0 && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <p className="text-xs text-ash-muted mb-1">関心が高い業界:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {recommendationAnalysis.preferredIndustries.slice(0, 3).map((ind: any) => (
+                            <Badge key={ind.name} variant="secondary" className="text-xs">
+                              {ind.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : evaluatedCompanies.length > 0 ? (
+                  <div className="text-center py-4 text-ash-muted">
+                    <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">おすすめ企業を準備中...</p>
+                    <p className="text-xs">より多くの企業を評価するとおすすめが表示されます</p>
                   </div>
                 ) : (
                   <div className="text-center py-4 text-ash-muted">
@@ -796,26 +857,30 @@ export default function DashboardPage() {
                     </Link>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {achievements.slice(0, 4).map((achievement) => {
+                  <div className="flex flex-wrap gap-2">
+                    {achievements.slice(0, 6).map((achievement) => {
                       // カテゴリー別のスタイル
                       const getCategoryStyle = (category?: string) => {
                         switch (category) {
-                          case 'membership': return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800' };
-                          case 'review': return { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800' };
-                          case 'quality': return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800' };
-                          case 'relationship': return { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800' };
-                          case 'network': return { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-800' };
-                          case 'special': return { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-800' };
-                          default: return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800' };
+                          case 'membership': return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' };
+                          case 'review': return { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' };
+                          case 'quality': return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' };
+                          case 'relationship': return { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' };
+                          case 'network': return { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700' };
+                          case 'special': return { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-700' };
+                          default: return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700' };
                         }
                       };
 
                       const style = getCategoryStyle(achievement.category);
                       return (
-                        <div key={achievement.id} className={`text-center p-3 rounded-lg ${style.bg} border ${style.border}`}>
-                          <span className="text-xl block mb-1">{achievement.badge}</span>
-                          <p className={`text-xs font-medium ${style.text}`}>{achievement.title}</p>
+                        <div
+                          key={achievement.id}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full ${style.bg} border ${style.border}`}
+                          title={achievement.description}
+                        >
+                          <span className="text-base">{achievement.badge}</span>
+                          <span className={`text-xs font-medium ${style.text} whitespace-nowrap`}>{achievement.title}</span>
                         </div>
                       );
                     })}

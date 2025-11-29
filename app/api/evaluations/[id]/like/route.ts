@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateSession } from '@/lib/auth-middleware';
 import connectDB from '@/lib/mongodb';
 import Evaluation from '@/models/Evaluation';
 
-// POST: Toggle like on evaluation
+// POST: Add like on evaluation (no auth required, can like multiple times)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await validateSession(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
     await connectDB();
 
@@ -22,38 +16,34 @@ export async function POST(
       return NextResponse.json({ error: 'Evaluation not found' }, { status: 404 });
     }
 
-    const userId = user.id;
-    const likes = evaluation.likes || [];
-    const hasLiked = likes.includes(userId);
+    // Always increment likes count (no toggle, no user check)
+    const currentCount = evaluation.likesCount || evaluation.likes?.length || 0;
+    evaluation.likesCount = currentCount + 1;
 
-    if (hasLiked) {
-      // Unlike
-      evaluation.likes = likes.filter((likeId: string) => likeId !== userId);
-    } else {
-      // Like
-      evaluation.likes = [...likes, userId];
+    // Keep likes array for backward compatibility but don't require it
+    if (!evaluation.likes) {
+      evaluation.likes = [];
     }
 
     await evaluation.save();
 
     return NextResponse.json({
       success: true,
-      liked: !hasLiked,
-      likesCount: evaluation.likes.length
+      liked: true,
+      likesCount: evaluation.likesCount
     });
   } catch (error) {
-    console.error('Error toggling like:', error);
+    console.error('Error adding like:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// GET: Get like status
+// GET: Get like count
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await validateSession(request);
     const { id } = await params;
 
     await connectDB();
@@ -63,12 +53,11 @@ export async function GET(
       return NextResponse.json({ error: 'Evaluation not found' }, { status: 404 });
     }
 
-    const likes = evaluation.likes || [];
-    const hasLiked = user ? likes.includes(user.id) : false;
+    const likesCount = evaluation.likesCount || evaluation.likes?.length || 0;
 
     return NextResponse.json({
-      likesCount: likes.length,
-      hasLiked
+      likesCount,
+      hasLiked: false
     });
   } catch (error) {
     console.error('Error getting like status:', error);

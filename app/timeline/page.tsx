@@ -50,6 +50,7 @@ export default function TimelinePage() {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [submittingReply, setSubmittingReply] = useState<string | null>(null);
   const [likingId, setLikingId] = useState<string | null>(null);
+  const [animatingLikes, setAnimatingLikes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchTimeline();
@@ -93,6 +94,23 @@ export default function TimelinePage() {
   };
 
   const handleLike = async (evaluationId: string) => {
+    // アニメーション開始
+    setAnimatingLikes(prev => new Set(prev).add(evaluationId));
+    setTimeout(() => {
+      setAnimatingLikes(prev => {
+        const next = new Set(prev);
+        next.delete(evaluationId);
+        return next;
+      });
+    }, 600);
+
+    // 楽観的UI更新
+    setEvaluations(prev => prev.map(e =>
+      e.id === evaluationId
+        ? { ...e, likesCount: e.likesCount + 1 }
+        : e
+    ));
+
     setLikingId(evaluationId);
     try {
       const response = await fetch(`/api/evaluations/${evaluationId}/like`, {
@@ -100,16 +118,11 @@ export default function TimelinePage() {
         credentials: 'include'
       });
 
-      if (response.status === 401) {
-        alert('いいねするにはログインが必要です');
-        return;
-      }
-
       if (response.ok) {
         const data = await response.json();
         setEvaluations(prev => prev.map(e =>
           e.id === evaluationId
-            ? { ...e, hasLiked: data.liked, likesCount: data.likesCount }
+            ? { ...e, likesCount: data.likesCount }
             : e
         ));
       }
@@ -411,14 +424,10 @@ export default function TimelinePage() {
                       <button
                         onClick={() => handleLike(evaluation.id)}
                         disabled={likingId === evaluation.id}
-                        className={`flex items-center gap-1.5 text-sm transition-colors ${
-                          evaluation.hasLiked
-                            ? 'text-red-500'
-                            : 'text-gray-500 hover:text-red-500'
-                        }`}
+                        className="flex items-center gap-1.5 text-sm transition-colors text-bond-pink hover:text-bond-pinkDark"
                       >
                         <Heart
-                          className={`w-4 h-4 ${evaluation.hasLiked ? 'fill-red-500' : ''}`}
+                          className={`w-4 h-4 fill-bond-pink ${animatingLikes.has(evaluation.id) ? 'animate-heart-beat' : ''}`}
                         />
                         <span>{evaluation.likesCount > 0 ? evaluation.likesCount : ''}</span>
                         <span className="hidden sm:inline">いいね</span>

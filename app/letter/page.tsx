@@ -1,7 +1,5 @@
 'use client';
 
-import { Mail } from 'lucide-react';
-
 export default function LetterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-ash-bg/50 via-white to-ash-surface/30 py-12 px-4">
@@ -17,15 +15,8 @@ export default function LetterPage() {
             {/* 手紙の上部装飾 */}
             <div className="h-2 bg-gradient-to-r from-ash-pink via-ash-peach to-ash-pink" />
 
-            {/* 封筒のシール風アイコン */}
-            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2">
-              <div className="w-16 h-16 bg-gradient-to-br from-ash-pink to-ash-lilac rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-                <Mail className="w-7 h-7 text-white" />
-              </div>
-            </div>
-
             {/* 手紙の内容 */}
-            <div className="px-8 md:px-12 pt-14 pb-10">
+            <div className="px-8 md:px-12 pt-8 pb-10">
               {/* タイトル */}
               <h1 className="text-center text-2xl md:text-3xl font-serif text-ash-text mb-10">
                 創業者からあなたへ

@@ -64,6 +64,8 @@ export async function GET(request: NextRequest) {
       const relationshipType = evaluation.relationshipType ?? 0;
       const likes = evaluation.likes || [];
       const replies = evaluation.replies || [];
+      // likesCountフィールドを優先、なければlikes配列の長さを使用
+      const likesCount = evaluation.likesCount ?? likes.length;
 
       // リプライにユーザー情報を付加
       const repliesWithUsers = replies.map((reply: any) => ({
@@ -92,8 +94,8 @@ export async function GET(request: NextRequest) {
           logoUrl: '/default-company.png'
         },
         isAnonymous: evaluation.isAnonymous || false,
-        likesCount: likes.length,
-        hasLiked: currentUserId ? likes.includes(currentUserId) : false,
+        likesCount: likesCount,
+        hasLiked: false,
         repliesCount: replies.length,
         replies: repliesWithUsers
       };

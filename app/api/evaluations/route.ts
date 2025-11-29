@@ -5,8 +5,36 @@ import Evaluation from '@/models/Evaluation';
 import User from '@/models/User';
 import UserProfile from '@/models/UserProfile';
 import Notification from '@/models/Notification';
+import Message from '@/models/Message';
 import mongoose from 'mongoose';
 import { getRelationshipLabel } from '@/lib/relationship';
+
+const BOND_ADMIN_EMAIL = 'tomura@hackjpn.com';
+
+const TWO_EVALUATIONS_MESSAGE = `あなたが2件の評価を贈ってくれたこと、
+まずは心からありがとう。
+
+AIがあらゆる文章や広告をつくり出す時代に、
+あなたが「誰かの価値」を自分の言葉で讃えた行為は、
+それ自体が大きな信頼の灯火です。
+
+Bondは、江戸の村で人と人が支え合っていた頃のように、
+行いと人間性が"信用"になる世界を取り戻すことが使命です。
+
+あなたの評価は、その世界を一歩前に進めてくれました。
+誰かの挑戦を支え、誰かの未来の信用をつくっています。
+
+AIの時代だからこそ、
+人間にしか生み出せない価値があります。
+
+Bondは、それを可視化するために生まれました。
+あなたがその最初の担い手になってくれて、本当に嬉しいです。
+
+これからも一緒に、
+恩送りが自然にめぐる世界をつくっていきましょう。
+
+戸村 光
+CEO, hackjpn / Bond Founder`;
 
 // GET /api/evaluations - ユーザーの評価一覧を取得
 export const GET = requireAuth(async (request: NextRequest, user) => {
@@ -268,6 +296,32 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
         }
       });
       await unlockNotification.save();
+    }
+
+    if (updatedUser && updatedUser.evaluationCount === 2) {
+      const bondAdmin = await User.findOne({ email: BOND_ADMIN_EMAIL });
+
+      if (bondAdmin) {
+        await Message.create({
+          sender: bondAdmin._id,
+          recipient: userId,
+          subject: 'ご挨拶',
+          content: TWO_EVALUATIONS_MESSAGE,
+          read: false
+        });
+
+        const thankYouNotification = new Notification({
+          recipient: userId,
+          type: 'message',
+          title: 'hikaru tomuraからのメッセージ',
+          message: '2件の評価ありがとうございます。戸村からのメッセージが届いています。',
+          data: {
+            senderId: bondAdmin._id,
+            messageSubject: 'ご挨拶'
+          }
+        });
+        await thankYouNotification.save();
+      }
     }
 
     return new Response(

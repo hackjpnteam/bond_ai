@@ -248,15 +248,21 @@ export default function CompanyPage() {
       // 検索結果データ（常に取得して最新の検索レポートを表示）
       const apiSearchResults = await fetchSearchResults();
       
-      // APIから評価データを取得
+      // APIから評価データを取得（まず公開API、次に認証付きAPI）
       let evaluations: Evaluation[] = [];
       let averageRating = 0;
-      
+
       try {
-        const evaluationResponse = await fetch(`/api/evaluations?company=${encodeURIComponent(companyName)}&limit=100`, {
-          credentials: 'include',
-        });
-        
+        // まず公開APIを試す（ログアウト状態でも取得可能）
+        let evaluationResponse = await fetch(`/api/evaluations/public?company=${encodeURIComponent(companyName)}&limit=100`);
+
+        // 公開APIが失敗した場合、認証付きAPIを試す
+        if (!evaluationResponse.ok) {
+          evaluationResponse = await fetch(`/api/evaluations?company=${encodeURIComponent(companyName)}&limit=100`, {
+            credentials: 'include',
+          });
+        }
+
         if (evaluationResponse.ok) {
           const evaluationData = await evaluationResponse.json();
           if (evaluationData.success && evaluationData.evaluations) {
@@ -1067,24 +1073,25 @@ export default function CompanyPage() {
     }
   };
 
-  // いいねハンドラ
+  // いいねハンドラ（ログイン不要、何回でも押せる）
+  const [animatingLikes, setAnimatingLikes] = useState<Set<string>>(new Set());
+
   const handleLike = async (evaluationId: string) => {
-    if (!currentUser?.id) {
-      alert('いいねするにはログインが必要です');
-      return;
-    }
+    // アニメーション開始
+    setAnimatingLikes(prev => new Set(prev).add(evaluationId));
+    setTimeout(() => {
+      setAnimatingLikes(prev => {
+        const next = new Set(prev);
+        next.delete(evaluationId);
+        return next;
+      });
+    }, 600);
 
     setLikingId(evaluationId);
     try {
       const response = await fetch(`/api/evaluations/${evaluationId}/like`, {
-        method: 'POST',
-        credentials: 'include'
+        method: 'POST'
       });
-
-      if (response.status === 401) {
-        alert('いいねするにはログインが必要です');
-        return;
-      }
 
       if (response.ok) {
         const data = await response.json();
@@ -1092,13 +1099,13 @@ export default function CompanyPage() {
           ...prev,
           evaluations: prev.evaluations.map(e =>
             e.id === evaluationId
-              ? { ...e, hasLiked: data.liked, likesCount: data.likesCount }
+              ? { ...e, hasLiked: true, likesCount: data.likesCount }
               : e
           )
         } : null);
       }
     } catch (error) {
-      console.error('Failed to toggle like:', error);
+      console.error('Failed to add like:', error);
     } finally {
       setLikingId(null);
     }
@@ -1768,17 +1775,22 @@ URL: ${window.location.href}`;
                               <button
                                 onClick={() => handleLike(evaluation.id)}
                                 disabled={likingId === evaluation.id}
-                                className={`flex items-center gap-1.5 text-sm transition-colors ${
-                                  evaluation.hasLiked
-                                    ? 'text-red-500'
-                                    : 'text-gray-500 hover:text-red-500'
-                                }`}
+                                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-bond-pink transition-colors group"
                               >
                                 <Heart
-                                  className={`w-4 h-4 ${evaluation.hasLiked ? 'fill-red-500' : ''}`}
+                                  className={`w-5 h-5 transition-all duration-200 ${
+                                    animatingLikes.has(evaluation.id)
+                                      ? 'fill-bond-pink text-bond-pink animate-heart-beat'
+                                      : evaluation.likesCount > 0
+                                        ? 'fill-bond-pink text-bond-pink'
+                                        : 'group-hover:scale-110'
+                                  }`}
                                 />
-                                <span>{evaluation.likesCount > 0 ? evaluation.likesCount : ''}</span>
-                                <span className="hidden sm:inline">いいね</span>
+                                <span className={`font-medium min-w-[1.5rem] transition-all duration-200 ${
+                                  animatingLikes.has(evaluation.id) ? 'text-bond-pink' : evaluation.likesCount > 0 ? 'text-bond-pink' : ''
+                                }`}>
+                                  {evaluation.likesCount || 0}
+                                </span>
                               </button>
 
                               <button

@@ -22,31 +22,13 @@ export async function GET(request: NextRequest) {
     await connectDB()
     const db = mongoose.connection.db
 
-    // 対象ユーザーを取得
-    let targetUser = null
-    if (username === 'tomura' || username === 'hikaru') {
-      targetUser = await db.collection('users').findOne({
-        $or: [
-          { email: 'tomura@hackjpn.com' },
-          { name: 'Hikaru Tomura' }
-        ]
-      })
-    } else if (username === 'team') {
-      targetUser = await db.collection('users').findOne({
-        $or: [
-          { email: 'team@hackjpn.com' },
-          { name: '瀬戸光志' }
-        ]
-      })
-    } else if (username === 'tomtysmile5017') {
-      targetUser = await db.collection('users').findOne({
-        $or: [
-          { email: 'tomtysmile5017@gmail.com' },
-          { name: 'Rihito Tomura' },
-          { _id: new mongoose.Types.ObjectId('6913d7e1e0a67ca6e82c2963') }
-        ]
-      })
-    }
+    // 対象ユーザーを取得（usernameまたはemailで検索）
+    const targetUser = await db.collection('users').findOne({
+      $or: [
+        { username: username },
+        { email: username }
+      ]
+    })
 
     if (!targetUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })

@@ -22,6 +22,10 @@ export default {
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -29,9 +33,9 @@ export default {
         border: "hsl(var(--border))",
         ring: "hsl(var(--ring))",
         bond: {
-          pink: '#FF5E9E',
+          pink: '#C73B78',
           cream: '#FFF3F8',
-          pinkDark: '#E8478B'
+          pinkDark: '#A52D63'
         },
         ash: {
           bg: "#F5ECE2",       // クリーミーな背景

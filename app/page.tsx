@@ -185,23 +185,6 @@ export default function Page() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-10 md:mt-20 border-t border-ash-line bg-ash-surface">
-        <div className="container-narrow mx-auto px-3 md:px-4 py-6 md:py-10 text-sm text-ash-muted">
-          <div className="flex flex-col items-center">
-            <div className="flex flex-wrap justify-center gap-4 md:gap-6">
-              <CustomLink href="/ranking" className="hover:text-ash-text transition-colors py-1">ランキング</CustomLink>
-              <CustomLink href="/timeline" className="hover:text-ash-text transition-colors py-1">タイムライン</CustomLink>
-              <CustomLink href="/privacy" className="hover:text-ash-text transition-colors py-1">プライバシー</CustomLink>
-              <CustomLink href="/terms" className="hover:text-ash-text transition-colors py-1">利用規約</CustomLink>
-              <CustomLink href="/support" className="hover:text-ash-text transition-colors py-1">サポート</CustomLink>
-            </div>
-          </div>
-          <div className="border-t border-ash-line mt-6 md:mt-8 pt-6 md:pt-8 text-center text-xs md:text-sm">
-            <p>&copy; 2024 Bond. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
     </>
   );
 }

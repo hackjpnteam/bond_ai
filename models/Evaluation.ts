@@ -27,7 +27,8 @@ export interface IEvaluation extends Document {
     editedAt: Date;
     reason?: string;
   }>;
-  likes: string[]; // Array of user IDs who liked
+  likes: string[]; // Array of user IDs who liked (legacy)
+  likesCount: number; // Total like count (can be incremented multiple times)
   replies: IReply[];
   isPublic: boolean;
   isAnonymous: boolean;
@@ -89,6 +90,10 @@ const EvaluationSchema: Schema<IEvaluation> = new Schema({
     type: String,
     ref: 'User'
   }],
+  likesCount: {
+    type: Number,
+    default: 0
+  },
   replies: [{
     userId: { type: String, required: true, ref: 'User' },
     content: { type: String, required: true, maxlength: 500 },

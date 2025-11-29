@@ -111,11 +111,11 @@ export async function GET(
 
     if (reviewCount >= 10) {
       achievements.push({
-        id: 'expert-reviewer',
-        title: 'エキスパートレビュアー',
+        id: 'review-king',
+        title: '評価王',
         description: '10以上の企業を評価しました',
         earnedDate: evaluations[9].createdAt,
-        badge: '💫',
+        badge: '👑',
         category: 'review'
       });
     }

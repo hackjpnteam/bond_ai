@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import Link from 'next/link'
 import {
-  Send, Users, Search, MoreVertical, ArrowLeft, MessageCircle, Plus, User, ChevronLeft
+  Send, Users, Search, MoreVertical, ArrowLeft, MessageCircle, Plus, User, ChevronLeft, Trash2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -183,6 +183,29 @@ export default function ChatMessagesPage() {
       }
     } catch (error) {
       console.error('Error sending message:', error)
+      toast.error('エラーが発生しました')
+    }
+  }
+
+  const deleteMessage = async (messageId: string) => {
+    if (!confirm('このメッセージを削除しますか？')) return
+
+    try {
+      const response = await fetch(`/api/messages/${messageId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        setMessages(prev => prev.filter(m => m._id !== messageId))
+        toast.success('メッセージを削除しました')
+        // 会話リストを更新
+        fetchConversations()
+      } else {
+        toast.error('メッセージの削除に失敗しました')
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
       toast.error('エラーが発生しました')
     }
   }
@@ -391,12 +414,23 @@ export default function ChatMessagesPage() {
                       )}
 
                       <div className={`max-w-[75%] ${isFromCurrentUser ? 'text-right' : 'text-left'}`}>
-                        <div className={`inline-block px-3 py-2 rounded-2xl ${
-                          isFromCurrentUser
-                            ? 'bg-blue-600 rounded-br-sm'
-                            : 'bg-white rounded-bl-sm shadow-sm'
-                        }`}>
-                          <p className={`text-sm whitespace-pre-wrap break-words ${isFromCurrentUser ? 'text-white' : 'text-gray-900'}`}>{message.content}</p>
+                        <div className="group relative">
+                          <div className={`inline-block px-3 py-2 rounded-2xl text-left ${
+                            isFromCurrentUser
+                              ? 'bg-blue-600 rounded-br-sm'
+                              : 'bg-white rounded-bl-sm shadow-sm'
+                          }`}>
+                            <p className={`text-sm whitespace-pre-wrap break-words ${isFromCurrentUser ? 'text-white' : 'text-gray-900'}`}>{message.content}</p>
+                          </div>
+                          <button
+                            onClick={() => deleteMessage(message._id)}
+                            className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full bg-red-100 hover:bg-red-200 ${
+                              isFromCurrentUser ? '-left-8' : '-right-8'
+                            }`}
+                            title="削除"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          </button>
                         </div>
                         <p className="text-[10px] text-gray-400 mt-0.5 px-1">
                           {formatTime(message.createdAt)}
@@ -597,12 +631,23 @@ export default function ChatMessagesPage() {
                             </div>
 
                             <div className={`max-w-md ${isFromCurrentUser ? 'text-right' : 'text-left'}`}>
-                              <div className={`inline-block px-4 py-2 rounded-2xl ${
-                                isFromCurrentUser
-                                  ? 'bg-blue-600 rounded-br-sm'
-                                  : 'bg-white rounded-bl-sm shadow-sm'
-                              }`}>
-                                <p className={`text-sm whitespace-pre-wrap ${isFromCurrentUser ? 'text-white' : 'text-gray-900'}`}>{message.content}</p>
+                              <div className="group relative inline-block">
+                                <div className={`inline-block px-4 py-2 rounded-2xl text-left ${
+                                  isFromCurrentUser
+                                    ? 'bg-blue-600 rounded-br-sm'
+                                    : 'bg-white rounded-bl-sm shadow-sm'
+                                }`}>
+                                  <p className={`text-sm whitespace-pre-wrap ${isFromCurrentUser ? 'text-white' : 'text-gray-900'}`}>{message.content}</p>
+                                </div>
+                                <button
+                                  onClick={() => deleteMessage(message._id)}
+                                  className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full bg-red-100 hover:bg-red-200 ${
+                                    isFromCurrentUser ? '-left-10' : '-right-10'
+                                  }`}
+                                  title="削除"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </button>
                               </div>
                               <p className="text-xs text-gray-500 mt-1 px-2">
                                 {formatTime(message.createdAt)}

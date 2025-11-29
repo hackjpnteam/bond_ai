@@ -24,7 +24,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   if (user) {
     // Authenticated layout with sidebar
     return (
-      <div className="min-h-screen bg-bond-cream">
+      <div className="min-h-screen bg-bond-cream flex flex-col">
         {/* Global Logo - Desktop only, mobile handled by AsideNav */}
         <div className="hidden lg:flex fixed top-4 left-4 z-50 items-center gap-2 px-3 py-2 cursor-pointer" onClick={() => window.location.href = '/'}>
           <img
@@ -39,10 +39,13 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
           </span>
         </div>
         <AsideNav user={user} />
-        <main className="lg:ml-64 pt-16 lg:pt-0">
+        <main className="lg:ml-64 pt-16 lg:pt-0 flex-1">
           <OnboardingBanner />
           {children}
         </main>
+        <div className="lg:ml-64">
+          <Footer />
+        </div>
       </div>
     );
   }

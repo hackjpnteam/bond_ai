@@ -95,34 +95,31 @@ export function CompanyOverview({
       </div>
 
       {/* 折りたたみ時のグラデーションオーバーレイ */}
-      {shouldTruncate && !isExpanded && (
-        <div className="absolute bottom-12 left-0 right-0 h-24 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none" />
-      )}
 
       {/* ログインゲート表示（未ログイン & 隠しコンテンツあり） */}
       {shouldShowLoginGate && (
-        <div className="mt-4 p-6 bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-xl text-center">
-          <Lock className="w-8 h-8 mx-auto text-bond-pink mb-3" />
+        <div className="mt-4 p-6 bg-gray-50 border border-gray-300 rounded-xl text-center">
+          <Lock className="w-8 h-8 mx-auto text-gray-700 mb-3" />
           <h4 className="text-lg font-semibold text-gray-900 mb-2">
             詳細を見るにはログインが必要です
           </h4>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-gray-700 mb-4">
             市場ポジション、競合情報、将来展望などの詳細分析を閲覧するにはログインしてください
           </p>
           <div className="flex justify-center gap-3">
             <Link href="/login">
-              <Button className="bg-bond-pink hover:bg-bond-pinkDark text-white shadow-md">
+              <Button className="bg-bond-pink hover:bg-bond-pinkDark text-white shadow-md font-semibold">
                 <LogIn className="w-4 h-4 mr-2" />
                 ログイン
               </Button>
             </Link>
             <Link href="/signup">
-              <Button variant="outline" className="border-2 border-bond-pink text-bond-pink hover:bg-bond-pink hover:text-white bg-white shadow-md">
+              <Button variant="outline" className="border-2 border-bond-pink text-bond-pink hover:bg-bond-pink hover:text-white bg-white shadow-md font-semibold">
                 新規登録
               </Button>
             </Link>
           </div>
-          <p className="text-xs text-gray-500 mt-3">
+          <p className="text-xs text-gray-600 mt-3">
             残り {hiddenSectionCount} セクションの詳細情報があります
           </p>
         </div>

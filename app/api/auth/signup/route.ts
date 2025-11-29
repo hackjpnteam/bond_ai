@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import Connection from '@/models/Connection';
 import Notification from '@/models/Notification';
+import Message from '@/models/Message';
 
 interface SignupData {
   name: string;
@@ -130,7 +131,34 @@ export async function POST(request: NextRequest) {
         });
         await adminNotification.save();
 
-        console.log(`Auto-connected new user ${email} with Bond admin ${BOND_ADMIN_EMAIL}`);
+        // 戸村光からのウェルカムメッセージを送信
+        const welcomeMessage = new Message({
+          sender: bondAdmin._id,
+          recipient: user._id,
+          subject: 'ご挨拶',
+          content: `この度はご登録ありがとうございます。これを機にどうかよろしくお願いします。
+
+AI時代が本格的に始まり、タイムラインは"AIがつくった広告"であふれ返るようになりました。
+
+資本が広告を支配し、アルゴリズムが人の注意を奪い合う世界。
+そんな時代だからこそ、私たちはあえて逆張りをします。
+
+「人と人の信頼こそが、商売を強く、美しくする。」
+
+Bondは、その原点を取り戻すために生まれました。
+
+Bondは、あなたの信頼の歴史を読み解き、未来の信用力を予測する"与信評価AIエージェント"です。
+
+従来の数字だけでは測れない「人間の価値」を、静かに可視化し、
+恩送りが自然に生まれる世界を共に作りましょう。
+
+戸村光
+Bond支配人`,
+          read: false
+        });
+        await welcomeMessage.save();
+
+        console.log(`Auto-connected new user ${email} with Bond admin ${BOND_ADMIN_EMAIL} and sent welcome message`);
       }
     } catch (connectionError) {
       // コネクション作成に失敗してもユーザー登録は成功させる

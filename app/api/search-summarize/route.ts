@@ -331,7 +331,7 @@ function applyBondMetadata(
 ): ApiResponse {
   if (!companyDoc) {
     // DBに企業/人物データがない場合でも、クエリからslugを生成してリンクを作成
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://bond.giving';
     const generatedSlug = query.toLowerCase().replace(/\s+/g, '-');
     const pathPrefix = mode === 'person' ? 'person' : mode === 'service' ? 'service' : 'company';
     const bondPageUrl = `${appUrl}/${pathPrefix}/${encodeURIComponent(generatedSlug)}`;
@@ -344,7 +344,7 @@ function applyBondMetadata(
     };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const appUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://bond.giving';
   const pathPrefix = mode === 'person' ? 'person' : mode === 'service' ? 'service' : 'company';
   const bondPageUrl = `${appUrl}/${pathPrefix}/${encodeURIComponent(companyDoc.slug)}`;
 

@@ -420,74 +420,27 @@ export default function DashboardPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {achievements.map((achievement) => {
-                // カテゴリー別のグラデーション
-                const getCategoryStyle = (category?: string) => {
-                  switch (category) {
-                    case 'membership': return {
-                      gradient: 'from-blue-400 via-blue-500 to-blue-600',
-                      glow: 'shadow-blue-300/50',
-                      ribbon: 'bg-blue-600'
-                    };
-                    case 'review': return {
-                      gradient: 'from-purple-400 via-purple-500 to-purple-600',
-                      glow: 'shadow-purple-300/50',
-                      ribbon: 'bg-purple-600'
-                    };
-                    case 'quality': return {
-                      gradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
-                      glow: 'shadow-emerald-300/50',
-                      ribbon: 'bg-emerald-600'
-                    };
-                    case 'relationship': return {
-                      gradient: 'from-orange-400 via-orange-500 to-orange-600',
-                      glow: 'shadow-orange-300/50',
-                      ribbon: 'bg-orange-600'
-                    };
-                    case 'network': return {
-                      gradient: 'from-cyan-400 via-cyan-500 to-cyan-600',
-                      glow: 'shadow-cyan-300/50',
-                      ribbon: 'bg-cyan-600'
-                    };
-                    case 'special': return {
-                      gradient: 'from-pink-400 via-pink-500 to-pink-600',
-                      glow: 'shadow-pink-300/50',
-                      ribbon: 'bg-pink-600'
-                    };
-                    default: return {
-                      gradient: 'from-amber-400 via-amber-500 to-amber-600',
-                      glow: 'shadow-amber-300/50',
-                      ribbon: 'bg-amber-600'
-                    };
-                  }
-                };
-
-                const style = getCategoryStyle(achievement.category);
-
-                return (
+              {achievements.map((achievement) => (
                   <div
                     key={achievement.id}
-                    className="group relative flex flex-col items-center cursor-pointer"
+                    className="group flex flex-col items-center cursor-pointer"
                     title={achievement.description}
                   >
-                    {/* メダル本体 */}
-                    <div className={`relative w-16 h-16 rounded-full bg-gradient-to-br ${style.gradient} shadow-lg ${style.glow} group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}>
-                      {/* 光沢エフェクト */}
-                      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/40 via-transparent to-transparent" />
-                      {/* 内側のリング */}
-                      <div className="absolute inset-1.5 rounded-full border-2 border-white/30 flex items-center justify-center">
-                        <span className="text-2xl drop-shadow-sm">{achievement.badge}</span>
+                    {/* 高級感のあるダブルリングバッジ */}
+                    <div className="relative w-16 h-16">
+                      {/* 外側のリング */}
+                      <div className="absolute inset-0 rounded-full border border-bond-pink/40" />
+                      {/* 内側のメインリング */}
+                      <div className="absolute inset-1 rounded-full border-2 border-bond-pink bg-gradient-to-b from-white to-gray-50 flex items-center justify-center group-hover:from-bond-pink/5 group-hover:to-white transition-all">
+                        <span className="text-2xl">{achievement.badge}</span>
                       </div>
-                      {/* キラキラエフェクト */}
-                      <div className="absolute top-1 right-2 w-2 h-2 bg-white rounded-full opacity-60 group-hover:opacity-100 transition-opacity" />
+                      {/* 上部のハイライト */}
+                      <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-6 h-1.5 bg-gradient-to-r from-transparent via-white to-transparent rounded-full opacity-60" />
                     </div>
-                    {/* リボン */}
-                    <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 ${style.ribbon} px-2 py-0.5 rounded-full shadow-md`}>
-                      <span className="text-[10px] font-bold text-white whitespace-nowrap">{achievement.title}</span>
-                    </div>
+                    {/* タイトル */}
+                    <span className="mt-2 text-[10px] font-medium text-gray-700 text-center whitespace-nowrap">{achievement.title}</span>
                   </div>
-                );
-              })}
+                ))}
             </div>
           )}
         </div>

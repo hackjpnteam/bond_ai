@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, Package, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Heart, MessageCircle, Send, ChevronDown, ChevronUp, User, Trash2 } from 'lucide-react';
+import { Star, Package, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Heart, MessageCircle, Send, ChevronDown, ChevronUp, User, Trash2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { getUserDisplayName } from '@/lib/user-display';
 import { getRelationshipLabel, RELATIONSHIP_OPTIONS, RELATIONSHIP_TYPES } from '@/lib/relationship';
@@ -140,6 +141,7 @@ export default function ServicePage() {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [submittingReply, setSubmittingReply] = useState<string | null>(null);
   const [likingId, setLikingId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const LEGACY_RELATIONSHIP_MAP: Record<string, number> = {
     shareholder: RELATIONSHIP_TYPES.INVESTOR,
@@ -679,6 +681,59 @@ export default function ServicePage() {
     }
   };
 
+  // AI検索で情報を更新
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    toast.info('AI検索で最新情報を取得中...');
+
+    try {
+      const response = await fetch('/api/search-summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: serviceName,
+          mode: 'service'
+        })
+      });
+
+      if (!response.ok) throw new Error('検索に失敗しました');
+
+      const data = await response.json();
+
+      if (data.answer) {
+        // 検索結果をデータベースに保存
+        await fetch('/api/search-results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            query: serviceName,
+            company: serviceName,
+            answer: data.answer,
+            searchType: 'service',
+            metadata: {
+              mode: 'service',
+              sources: data.sources || [],
+              facts: data.facts
+            }
+          })
+        });
+
+        toast.success('情報を更新しました');
+        window.location.reload();
+      } else {
+        toast.error('情報の取得に失敗しました');
+      }
+    } catch (error) {
+      console.error('Refresh error:', error);
+      toast.error('更新に失敗しました');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleShare = async () => {
     const shareData = {
       title: `${serviceName} - Bond`,
@@ -691,7 +746,7 @@ export default function ServicePage() {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        alert('URLをクリップボードにコピーしました');
+        toast.success('URLをクリップボードにコピーしました');
       }
     } catch (error) {
       console.error('Error sharing:', error);
@@ -1241,6 +1296,17 @@ URL: ${window.location.href}`;
                 </div>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="px-2 sm:px-3"
+                  title="AI検索で最新情報に更新"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline ml-1">{isRefreshing ? '更新中' : '更新'}</span>
+                </Button>
                 {!isEditing && (
                   <Button
                     variant="outline"

@@ -66,172 +66,196 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
     });
   }
 
-  // companiesコレクションから詳細な会社情報を取得
-  const companyData = await Promise.all(
-    reviews.map(async (r) => {
-      // 複数のパターンで会社を検索
-      const searchPatterns = [
-        { slug: r._id },
-        { name: r.companyName },
-        { slug: r.companyName },
-        { name: r._id }
-      ].filter(pattern => Object.values(pattern)[0]); // 空でない値のみ
+  // companiesコレクションから詳細な会社情報を一括取得
+  const slugsAndNames = reviews.flatMap(r => [r._id, r.companyName].filter(Boolean));
+  const companiesFromDb = await db.collection("companies").find({
+    $or: [
+      { slug: { $in: slugsAndNames } },
+      { name: { $in: slugsAndNames } }
+    ]
+  }).toArray();
 
-      let company = null;
-      for (const pattern of searchPatterns) {
-        company = await db.collection("companies").findOne(pattern);
-        if (company) break;
-      }
+  // 検索用マップを作成
+  const companyMap = new Map();
+  companiesFromDb.forEach(c => {
+    if (c.slug) companyMap.set(c.slug, c);
+    if (c.name) companyMap.set(c.name, c);
+  });
 
-      // 会社情報があれば詳細データを使用、なければ評価データから生成
-      const fullCompanyName = company?.name || r.companyName || r._id || "Unknown";
-      const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
+  const companyData = reviews.map((r) => {
+    // マップから会社を検索
+    const company = companyMap.get(r._id) || companyMap.get(r.companyName) || null;
 
-      // ロゴURLはAPIエンドポイント経由で取得（会社ページで設定したロゴを反映）
-      const slug = company?.slug || r._id;
-      const logoUrl = `/api/company-logo/${encodeURIComponent(slug)}`;
+    const fullCompanyName = company?.name || r.companyName || r._id || "Unknown";
+    const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
+    const slug = company?.slug || r._id;
+    const logoUrl = `/api/company-logo/${encodeURIComponent(slug)}`;
 
-      return {
-        id: displayName, // 表示用の名前
-        fullName: fullCompanyName, // 実データの完全な名前
-        type: "org",
-        imageUrl: logoUrl,
-        reviewCount: r.reviewCount,
-        strength: Math.round(r.strength * 10) / 10,
-        relationshipType: r.relationshipType ?? 0, // 関係性タイプを追加
-        reviewedBy: username, // 評価者をusernameで追加
-        reviewedByName: user.name, // 評価者の表示名を追加
-        // 会社概要データを追加
-        industry: company?.industry || "未分類",
-        description: company?.description || `${fullCompanyName}の評価情報`,
-        founded: company?.founded || "不明",
-        employees: company?.employees || "不明",
-        website: company?.website,
-        searchCount: company?.searchCount || 0,
-        averageRating: company?.averageRating || r.strength
-      };
-    })
-  );
+    return {
+      id: displayName,
+      fullName: fullCompanyName,
+      type: "org",
+      imageUrl: logoUrl,
+      reviewCount: r.reviewCount,
+      strength: Math.round(r.strength * 10) / 10,
+      relationshipType: r.relationshipType ?? 0,
+      reviewedBy: username,
+      reviewedByName: user.name,
+      industry: company?.industry || "未分類",
+      description: company?.description || `${fullCompanyName}の評価情報`,
+      founded: company?.founded || "不明",
+      employees: company?.employees || "不明",
+      website: company?.website,
+      searchCount: company?.searchCount || 0,
+      averageRating: company?.averageRating || r.strength
+    };
+  });
 
   const companies = companyData;
 
   // 接続されたユーザーを取得
   const currentUser = await User.findOne({ email: user.email });
-  let connectedUsers = [];
-  let connectedUsersCompanies = [];
-  
+  let connectedUsers: any[] = [];
+  let connectedUsersCompanies: any[] = [];
+
   console.log('Current user:', currentUser ? currentUser.name : 'Not found');
-  
+
   if (currentUser) {
     // データベースから直接接続を取得
     const connections = await db.collection("connections").find({
       users: currentUser._id,
       status: 'active'
     }).toArray();
-    
+
     console.log('Found connections:', connections.length);
-    
-    for (const conn of connections) {
-      console.log('Processing connection:', conn._id);
-      
-      // 他のユーザーIDを見つける
-      const otherUserId = conn.users.find(id => id.toString() !== currentUser._id.toString());
-      if (!otherUserId) continue;
-      
-      console.log('Other user ID:', otherUserId);
-      
-      // 他のユーザーの情報を取得
-      const otherUser = await db.collection("users").findOne({ _id: otherUserId });
-      if (!otherUser) continue;
-      
-      console.log('Other user found:', otherUser.name);
-      
-      // UserProfileから画像を取得
-      let userImage = otherUser.image;
-      if (!userImage) {
-        const userProfile = await db.collection("userprofiles").findOne({ userId: otherUserId });
-        if (userProfile && userProfile.profileImage) {
-          userImage = userProfile.profileImage;
-        }
-      }
-      
-      console.log(`Connected user ${otherUser.name}: final image = ${userImage}`);
-      
-      // 接続ユーザーのusernameを決定
-      let connectedUsername;
-      if (otherUser.email === 'tomura@hackjpn.com') {
-        connectedUsername = 'tomura';
-      } else if (otherUser.email === 'team@hackjpn.com') {
-        connectedUsername = 'team';
-      } else if (otherUser.name === 'Hikaru Tomura') {
-        connectedUsername = 'hikaru';
-      } else {
-        // その他の場合はemailの@前部分を使用
-        connectedUsername = otherUser.email?.split('@')[0] || otherUser.name;
-      }
 
-      connectedUsers.push({
-        id: connectedUsername, // usernameを使用
-        name: otherUser.name, // 表示名を追加
-        type: "person",
-        imageUrl: userImage || '/default-avatar.png',
-        company: otherUser.company,
-        position: otherUser.position,
-        strength: conn.strength || 1,
-        userId: otherUser._id.toString(),
-        reviewCount: 0 // デフォルト値として0を設定
-      });
-    }
-    
-    // 接続ユーザーの評価企業を取得
-    for (const connUser of connectedUsers) {
-      // 接続ユーザーのpossibleUserIdsを生成  
-      const connUserPossibleIds = [
-        connUser.userId, // ObjectId文字列
-        new mongoose.Types.ObjectId(connUser.userId), // ObjectId オブジェクト
-        `u_${connUser.id}`, // "u_username"形式
-        // 特定ユーザーの追加ID
-        ...(connUser.id === 'hikaru' ? ['u_hikaru'] : []),
-        ...(connUser.id === 'team' ? ['u_seto', 'seto'] : []),
-      ];
-      
-      console.log(`Searching evaluations for connected user ${connUser.id} with IDs:`, connUserPossibleIds.map(id => id.toString()));
+    // 他のユーザーIDを一括取得
+    const otherUserIds = connections
+      .map(conn => conn.users.find((id: any) => id.toString() !== currentUser._id.toString()))
+      .filter(Boolean);
 
-      const userReviews = await db.collection("evaluations").aggregate([
-        {
-          $match: {
-            userId: {
-              $in: connUserPossibleIds
-            }
-          }
-        },
-        {
-          $group: {
-            _id: "$companySlug",
-            companyName: { $first: "$companyName" },
-            reviewCount: { $sum: 1 },
-            strength: { $avg: "$rating" },
-            relationshipType: { $first: "$relationshipType" }
+    if (otherUserIds.length > 0) {
+      // ユーザー情報を一括取得
+      const otherUsers = await db.collection("users").find({ _id: { $in: otherUserIds } }).toArray();
+      const otherUsersMap = new Map(otherUsers.map(u => [u._id.toString(), u]));
+
+      // UserProfile情報を一括取得
+      const userProfiles = await db.collection("userprofiles").find({ userId: { $in: otherUserIds } }).toArray();
+      const userProfilesMap = new Map(userProfiles.map(p => [p.userId.toString(), p]));
+
+      // 接続情報をマップに
+      const connectionStrengthMap = new Map(connections.map(conn => {
+        const otherId = conn.users.find((id: any) => id.toString() !== currentUser._id.toString());
+        return [otherId?.toString(), conn.strength || 1];
+      }));
+
+      for (const otherUserId of otherUserIds) {
+        const otherUser = otherUsersMap.get(otherUserId.toString());
+        if (!otherUser) continue;
+
+        let userImage = otherUser.image;
+        if (!userImage) {
+          const userProfile = userProfilesMap.get(otherUserId.toString());
+          if (userProfile?.profileImage) {
+            userImage = userProfile.profileImage;
           }
         }
-      ]).toArray();
-      
-      console.log(`Found ${userReviews.length} reviews for ${connUser.id}:`, userReviews.map(r => `${r.companyName}(${r.reviewCount})`));
-      
-      // 接続ユーザーの企業評価を追加
-      for (const review of userReviews) {
-        const company = await db.collection("companies").findOne({
-          $or: [
-            { slug: review._id },
-            { name: review.companyName }
-          ]
+
+        let connectedUsername;
+        if (otherUser.email === 'tomura@hackjpn.com') {
+          connectedUsername = 'tomura';
+        } else if (otherUser.email === 'team@hackjpn.com') {
+          connectedUsername = 'team';
+        } else if (otherUser.name === 'Hikaru Tomura') {
+          connectedUsername = 'hikaru';
+        } else {
+          connectedUsername = otherUser.email?.split('@')[0] || otherUser.name;
+        }
+
+        connectedUsers.push({
+          id: connectedUsername,
+          name: otherUser.name,
+          type: "person",
+          imageUrl: userImage || '/default-avatar.png',
+          company: otherUser.company,
+          position: otherUser.position,
+          strength: connectionStrengthMap.get(otherUserId.toString()) || 1,
+          userId: otherUser._id.toString(),
+          reviewCount: 0
         });
+      }
+    }
 
-        const fullCompanyName = review.companyName;
+    // 接続ユーザーの評価企業を一括取得
+    if (connectedUsers.length > 0) {
+      // 全ての接続ユーザーのpossibleUserIdsを生成
+      const allPossibleIds: any[] = [];
+      const userIdToConnUser = new Map();
+
+      for (const connUser of connectedUsers) {
+        const possibleIds = [
+          connUser.userId,
+          new mongoose.Types.ObjectId(connUser.userId),
+          `u_${connUser.id}`,
+          ...(connUser.id === 'hikaru' ? ['u_hikaru'] : []),
+          ...(connUser.id === 'team' ? ['u_seto', 'seto'] : []),
+        ];
+        possibleIds.forEach(id => {
+          allPossibleIds.push(id);
+          userIdToConnUser.set(id.toString(), connUser);
+        });
+      }
+
+      // 全ての評価を一括取得
+      const allUserReviews = await db.collection("evaluations").find({
+        userId: { $in: allPossibleIds }
+      }).toArray();
+
+      // companySlugとcompanyNameを収集
+      const allSlugsAndNames = allUserReviews.flatMap(r => [r.companySlug, r.companyName].filter(Boolean));
+
+      // 企業情報を一括取得
+      const connectedCompaniesFromDb = await db.collection("companies").find({
+        $or: [
+          { slug: { $in: allSlugsAndNames } },
+          { name: { $in: allSlugsAndNames } }
+        ]
+      }).toArray();
+
+      const connectedCompanyMap = new Map();
+      connectedCompaniesFromDb.forEach(c => {
+        if (c.slug) connectedCompanyMap.set(c.slug, c);
+        if (c.name) connectedCompanyMap.set(c.name, c);
+      });
+
+      // 評価をユーザーごとにグループ化
+      const reviewsByUser = new Map();
+      for (const review of allUserReviews) {
+        const connUser = userIdToConnUser.get(review.userId?.toString());
+        if (!connUser) continue;
+
+        const key = `${connUser.id}_${review.companySlug}`;
+        if (!reviewsByUser.has(key)) {
+          reviewsByUser.set(key, {
+            connUser,
+            companySlug: review.companySlug,
+            companyName: review.companyName,
+            reviewCount: 0,
+            totalRating: 0,
+            relationshipType: review.relationshipType
+          });
+        }
+        const data = reviewsByUser.get(key);
+        data.reviewCount++;
+        data.totalRating += review.rating || 0;
+      }
+
+      // 結果を生成
+      for (const data of reviewsByUser.values()) {
+        const company = connectedCompanyMap.get(data.companySlug) || connectedCompanyMap.get(data.companyName);
+        const fullCompanyName = data.companyName || data.companySlug || "Unknown";
         const displayName = fullCompanyName.replace(/^株式会社/, '').trim();
-
-        // ロゴURLはAPIエンドポイント経由で取得（会社ページで設定したロゴを反映）
-        const slug = company?.slug || review._id;
+        const slug = company?.slug || data.companySlug;
         const logoUrl = `/api/company-logo/${encodeURIComponent(slug)}`;
 
         connectedUsersCompanies.push({
@@ -239,11 +263,11 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
           fullName: fullCompanyName,
           type: "org",
           imageUrl: logoUrl,
-          reviewCount: review.reviewCount,
-          strength: Math.round(review.strength * 10) / 10,
-          relationshipType: review.relationshipType ?? 0,
-          reviewedBy: connUser.id,
-          reviewedByName: connUser.name
+          reviewCount: data.reviewCount,
+          strength: Math.round((data.totalRating / data.reviewCount) * 10) / 10,
+          relationshipType: data.relationshipType ?? 0,
+          reviewedBy: data.connUser.id,
+          reviewedByName: data.connUser.name
         });
       }
     }

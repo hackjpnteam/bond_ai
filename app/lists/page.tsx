@@ -84,11 +84,14 @@ export default function ListsPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          // 各保存アイテムの最新データを取得
-          const updatedItems = await Promise.all(
-            data.savedItems.map(async (item: SavedItem) => {
+          // まず保存アイテムをすぐに表示
+          setSavedItems(data.savedItems);
+          setLoading(false);
+
+          // バックグラウンドで各アイテムの最新データを取得して更新
+          const updateItemsInBackground = async () => {
+            for (const item of data.savedItems) {
               try {
-                // 企業またはサービスの最新情報を取得
                 if (item.itemType === 'company' || item.itemType === 'service') {
                   const slug = item.itemData.slug || item.itemData.name.toLowerCase();
                   const endpoint = item.itemType === 'company'
@@ -98,11 +101,9 @@ export default function ListsPage() {
                   const detailRes = await fetch(endpoint, { credentials: 'include' });
                   if (detailRes.ok) {
                     const detailData = await detailRes.json();
-                    // APIは直接データを返すか、company/serviceでラップされている場合がある
                     const entityData = detailData.company || detailData.service || detailData;
 
                     if (entityData?.description) {
-                      // Markdownから概要を抽出
                       let summaryDescription = '';
                       const overviewMatch = entityData.description.match(/##\s*1\.\s*概要\s*\n([\s\S]*?)(?=\n##\s*2\.|$)/i);
                       if (overviewMatch) {
@@ -112,7 +113,6 @@ export default function ListsPage() {
                           .trim()
                           .substring(0, 500);
                       } else {
-                        // 概要セクションがない場合は最初の段落を使用
                         summaryDescription = entityData.description
                           .split('\n')
                           .filter((line: string) => line.trim().length > 20 && !line.startsWith('#') && !line.startsWith('*'))
@@ -122,13 +122,11 @@ export default function ListsPage() {
                       }
 
                       if (summaryDescription) {
-                        return {
-                          ...item,
-                          itemData: {
-                            ...item.itemData,
-                            description: summaryDescription
-                          }
-                        };
+                        setSavedItems(prev => prev.map(i =>
+                          i.id === item.id
+                            ? { ...i, itemData: { ...i.itemData, description: summaryDescription } }
+                            : i
+                        ));
                       }
                     }
                   }
@@ -136,13 +134,13 @@ export default function ListsPage() {
               } catch (err) {
                 console.log(`Failed to fetch latest data for ${item.itemData.name}:`, err);
               }
-              return item;
-            })
-          );
-          setSavedItems(updatedItems);
+            }
+          };
+
+          updateItemsInBackground();
+          return;
         }
       } else if (response.status === 401) {
-        // User not authenticated
         setSavedItems([]);
       }
     } catch (error) {

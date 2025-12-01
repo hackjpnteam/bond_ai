@@ -207,10 +207,11 @@ export const POST = requireAuth(async (request: NextRequest, user) => {
             searchCount: 1,
             averageRating: 0,
             dataSource: 'ai_search',
+            entityType: type === 'service' ? 'service' : 'company',
             lastSearchAt: new Date()
           });
           await newCompany.save();
-          console.log(`Created new company: ${targetName.trim()}`);
+          console.log(`Created new ${type}: ${targetName.trim()}`);
         }
       } catch (companyError) {
         console.error('Error updating company:', companyError);

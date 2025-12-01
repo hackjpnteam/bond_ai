@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, User, Building2, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Briefcase, GraduationCap, Award, Globe, Twitter, Linkedin, Camera, Loader2 } from 'lucide-react';
+import { Star, User, Building2, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Briefcase, GraduationCap, Award, Globe, Twitter, Linkedin, Camera, Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { getUserDisplayName } from '@/lib/user-display';
 import { getRelationshipLabel, RELATIONSHIP_OPTIONS, RELATIONSHIP_TYPES } from '@/lib/relationship';
@@ -118,6 +119,7 @@ export default function PersonPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     // 認証されたユーザー情報を取得
@@ -238,6 +240,59 @@ export default function PersonPage() {
     }
   };
 
+  // AI検索で情報を更新
+  const handleRefresh = async () => {
+    if (isRefreshing || !personData) return;
+
+    setIsRefreshing(true);
+    toast.info('AI検索で最新情報を取得中...');
+
+    try {
+      const response = await fetch('/api/search-summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: personData.name,
+          mode: 'person'
+        })
+      });
+
+      if (!response.ok) throw new Error('検索に失敗しました');
+
+      const data = await response.json();
+
+      if (data.answer) {
+        // 検索結果をデータベースに保存
+        await fetch('/api/search-results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            query: personData.name,
+            company: personData.name,
+            answer: data.answer,
+            searchType: 'person',
+            metadata: {
+              mode: 'person',
+              sources: data.sources || [],
+              facts: data.facts
+            }
+          })
+        });
+
+        toast.success('情報を更新しました');
+        window.location.reload();
+      } else {
+        toast.error('情報の取得に失敗しました');
+      }
+    } catch (error) {
+      console.error('Refresh error:', error);
+      toast.error('更新に失敗しました');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // シェア機能
   const handleShare = async () => {
     const shareData = {
@@ -251,7 +306,7 @@ export default function PersonPage() {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        alert('URLをクリップボードにコピーしました');
+        toast.success('URLをクリップボードにコピーしました');
       }
     } catch (error) {
       console.error('Error sharing:', error);
@@ -548,6 +603,17 @@ URL: ${window.location.href}`;
                 </div>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="px-2 sm:px-3"
+                  title="AI検索で最新情報に更新"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline ml-1">{isRefreshing ? '更新中' : '更新'}</span>
+                </Button>
                 {!isEditing && (
                   <Button
                     variant="outline"

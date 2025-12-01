@@ -456,7 +456,7 @@ export default function ChatMessagesPage() {
                     className="flex-1 min-h-[40px] max-h-24 resize-none text-sm rounded-full px-4 py-2"
                     rows={1}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === 'Enter' && e.shiftKey) {
                         e.preventDefault()
                         sendMessage(e)
                       }
@@ -466,6 +466,7 @@ export default function ChatMessagesPage() {
                     type="submit"
                     disabled={!newMessage.trim()}
                     className="bg-blue-600 hover:bg-blue-700 rounded-full w-10 h-10 p-0 flex-shrink-0"
+                    title="Shift+Enterで送信"
                   >
                     <Send className="w-4 h-4" />
                   </Button>
@@ -675,13 +676,13 @@ export default function ChatMessagesPage() {
                           placeholder="メッセージを入力..."
                           className="flex-1 min-h-[44px] max-h-32 resize-none"
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
+                            if (e.key === 'Enter' && e.shiftKey) {
                               e.preventDefault()
                               sendMessage(e)
                             }
                           }}
                         />
-                        <Button type="submit" disabled={!newMessage.trim()} className="bg-blue-600 hover:bg-blue-700">
+                        <Button type="submit" disabled={!newMessage.trim()} className="bg-blue-600 hover:bg-blue-700" title="Shift+Enterで送信">
                           <Send className="w-4 h-4" />
                         </Button>
                       </div>

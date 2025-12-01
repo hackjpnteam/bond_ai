@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const defaultImageHosts = ['bond-ai.vercel.app'];
+const defaultImageHosts = ['bond.giving'];
 
 const imageHostnames = (process.env.NEXT_IMAGE_ALLOWED_HOSTS || process.env.NEXT_PUBLIC_APP_DOMAIN || '')
   .split(',')

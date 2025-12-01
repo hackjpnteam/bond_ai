@@ -76,6 +76,7 @@ export default function TrustMapPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCompanies, setShowCompanies] = useState(true);
+  const [showUsers, setShowUsers] = useState(true);
   const [relationshipFilter, setRelationshipFilter] = useState<number | 'all'>('all');
 
   useEffect(() => {
@@ -148,17 +149,24 @@ export default function TrustMapPage() {
 
     const unifiedCompanies = Array.from(companyMap.values());
 
+    // ユーザー表示フィルタリング
+    const filteredUsers = showUsers ? (data.users || []) : [];
+
     // ノードを作成（人物ノードにnameを追加）
     const nodes = [
       { ...data.me, displayName: data.me.name },
       ...unifiedCompanies,
-      ...(data.users || []).map((u: any) => ({ ...u, displayName: u.name }))
+      ...filteredUsers.map((u: any) => ({ ...u, displayName: u.name }))
     ];
 
     // リンクを作成
     const companyLinks: any[] = [];
     unifiedCompanies.forEach((company: any) => {
       company.reviewers.forEach((reviewer: any) => {
+        // ユーザー非表示の場合、自分以外のレビューアからのリンクは除外
+        if (!showUsers && reviewer.name !== data.me.id) {
+          return;
+        }
         companyLinks.push({
           source: reviewer.name,
           target: company.id,
@@ -169,7 +177,7 @@ export default function TrustMapPage() {
 
     const links = [
       ...companyLinks,
-      ...(data.users || []).map((u: any) => ({
+      ...filteredUsers.map((u: any) => ({
         source: data.me.id,
         target: u.id,
         strength: u.strength || 1
@@ -177,7 +185,7 @@ export default function TrustMapPage() {
     ];
 
     return { nodes, links };
-  }, [data, showCompanies, relationshipFilter]);
+  }, [data, showCompanies, showUsers, relationshipFilter]);
 
   return (
     <div className="min-h-screen bg-bond-cream">
@@ -208,6 +216,21 @@ export default function TrustMapPage() {
               }`}
             >
               {showCompanies ? '表示中' : '非表示'}
+            </button>
+          </div>
+
+          {/* 人物表示トグル */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm text-gray-600">人物:</span>
+            <button
+              onClick={() => setShowUsers(!showUsers)}
+              className={`px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-colors ${
+                showUsers
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {showUsers ? '表示中' : '非表示'}
             </button>
           </div>
 

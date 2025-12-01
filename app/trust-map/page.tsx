@@ -97,76 +97,71 @@ export default function TrustMapPage() {
   }, [router]);
 
   // グラフデータを計算（dataが存在する場合のみ）
+  // ノードは常に全て表示し、リンクだけをフィルタリングする
+  // → リンクが切れたノードは外に飛んでいき、戻ると中央に戻ってくるUI
   const graphData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
 
-    // 企業表示フィルタリング
-    let filteredCompanies = showCompanies ? data.companies : [];
-    let filteredConnectedUsersCompanies = showCompanies ? (data.connectedUsersCompanies || []) : [];
-
-    // 関係性フィルタリング
-    if (relationshipFilter !== 'all') {
-      filteredCompanies = filteredCompanies.filter(
-        (c) => c.relationshipType === relationshipFilter
-      );
-      filteredConnectedUsersCompanies = filteredConnectedUsersCompanies.filter(
-        (c) => c.relationshipType === relationshipFilter
-      );
-    }
-
-    // 重複企業を統合（同じIDの企業は1つにまとめ、評価者情報を統合）
-    const companyMap = new Map();
+    // 全ての企業を統合（フィルタリング前の完全なリスト）
+    const allCompanyMap = new Map();
 
     // 現在のユーザーの企業を追加
-    filteredCompanies.forEach((company: any) => {
+    data.companies.forEach((company: any) => {
       const normalizedId = normalizeCompanyName(company.id);
-      companyMap.set(normalizedId, {
+      allCompanyMap.set(normalizedId, {
         ...company,
         id: normalizedId,
         reviewedBy: [company.reviewedBy || data.me.id],
-        reviewers: [{ name: company.reviewedBy || data.me.id, displayName: company.reviewedByName || data.me.name, strength: company.strength }]
+        reviewers: [{ name: company.reviewedBy || data.me.id, displayName: company.reviewedByName || data.me.name, strength: company.strength, relationshipType: company.relationshipType }]
       });
     });
 
     // 接続ユーザーの企業を追加（重複の場合は統合）
-    filteredConnectedUsersCompanies.forEach((company: any) => {
+    (data.connectedUsersCompanies || []).forEach((company: any) => {
       const normalizedId = normalizeCompanyName(company.id);
-      if (companyMap.has(normalizedId)) {
-        const existing = companyMap.get(normalizedId);
+      if (allCompanyMap.has(normalizedId)) {
+        const existing = allCompanyMap.get(normalizedId);
         if (!existing.reviewedBy.includes(company.reviewedBy)) {
           existing.reviewedBy.push(company.reviewedBy);
-          existing.reviewers.push({ name: company.reviewedBy, displayName: company.reviewedByName, strength: company.strength });
+          existing.reviewers.push({ name: company.reviewedBy, displayName: company.reviewedByName, strength: company.strength, relationshipType: company.relationshipType });
         }
       } else {
-        companyMap.set(normalizedId, {
+        allCompanyMap.set(normalizedId, {
           ...company,
           id: normalizedId,
           reviewedBy: [company.reviewedBy],
-          reviewers: [{ name: company.reviewedBy, displayName: company.reviewedByName, strength: company.strength }]
+          reviewers: [{ name: company.reviewedBy, displayName: company.reviewedByName, strength: company.strength, relationshipType: company.relationshipType }]
         });
       }
     });
 
-    const unifiedCompanies = Array.from(companyMap.values());
+    const allCompanies = Array.from(allCompanyMap.values());
+    const allUsers = data.users || [];
 
-    // ユーザー表示フィルタリング
-    const filteredUsers = showUsers ? (data.users || []) : [];
-
-    // ノードを作成（人物ノードにnameを追加）
+    // ノードは常に全て表示（フィルタリングしない）
     const nodes = [
       { ...data.me, displayName: data.me.name },
-      ...unifiedCompanies,
-      ...filteredUsers.map((u: any) => ({ ...u, displayName: u.name }))
+      ...allCompanies,
+      ...allUsers.map((u: any) => ({ ...u, displayName: u.name }))
     ];
 
-    // リンクを作成
+    // リンクだけをフィルタリング
     const companyLinks: any[] = [];
-    unifiedCompanies.forEach((company: any) => {
+    allCompanies.forEach((company: any) => {
       company.reviewers.forEach((reviewer: any) => {
+        // 企業非表示の場合はリンクを作成しない
+        if (!showCompanies) return;
+
+        // 関係性フィルターが設定されている場合
+        if (relationshipFilter !== 'all' && reviewer.relationshipType !== relationshipFilter) {
+          return;
+        }
+
         // ユーザー非表示の場合、自分以外のレビューアからのリンクは除外
         if (!showUsers && reviewer.name !== data.me.id) {
           return;
         }
+
         companyLinks.push({
           source: reviewer.name,
           target: company.id,
@@ -175,14 +170,14 @@ export default function TrustMapPage() {
       });
     });
 
-    const links = [
-      ...companyLinks,
-      ...filteredUsers.map((u: any) => ({
-        source: data.me.id,
-        target: u.id,
-        strength: u.strength || 1
-      }))
-    ];
+    // 人物へのリンク（人物非表示の場合はリンクを作成しない）
+    const userLinks = showUsers ? allUsers.map((u: any) => ({
+      source: data.me.id,
+      target: u.id,
+      strength: u.strength || 1
+    })) : [];
+
+    const links = [...companyLinks, ...userLinks];
 
     return { nodes, links };
   }, [data, showCompanies, showUsers, relationshipFilter]);

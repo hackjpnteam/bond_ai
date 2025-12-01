@@ -124,7 +124,6 @@ export default function ShareableTrustMap({
     identifier,
   });
   const [copied, setCopied] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
   const [isXSharing, setIsXSharing] = useState(false);
   const [isFacebookSharing, setIsFacebookSharing] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -147,34 +146,15 @@ export default function ShareableTrustMap({
 
   const showExportButton = TRUSTMAP_SHARE_ENABLED && !hideExportButton;
 
-  // シェア機能
-  const handleShare = async () => {
+  // URLコピー機能
+  const handleCopyUrl = async () => {
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareText = '信頼ネットワーク - Bond';
-
-    // Web Share APIが使える場合（主にモバイル）
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      setIsSharing(true);
-      try {
-        await navigator.share({
-          title: shareText,
-          url: shareUrl,
-        });
-      } catch (err) {
-        // ユーザーがキャンセルした場合など
-        console.log('Share cancelled or failed');
-      } finally {
-        setIsSharing(false);
-      }
-    } else {
-      // クリップボードにコピー
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -232,7 +212,7 @@ export default function ShareableTrustMap({
       const shareUrl = result?.shareUrl || getShareUrl();
       const file = result?.file;
 
-      const text = 'Bondで作った私のトラストマップ #Bond';
+      const text = 'Bondで作った私のトラストマップ #bond #信頼マップ';
 
       // 2. Web Share API Level 2 が使える場合（ファイル共有対応）
       if (file && typeof navigator !== 'undefined' && 'share' in navigator) {
@@ -280,9 +260,10 @@ export default function ShareableTrustMap({
 
       // 2. Facebook Share URL を開く（OGP画像が表示される）
       const encodedUrl = encodeURIComponent(shareUrl);
+      const quote = encodeURIComponent('Bondで作った私のトラストマップ #bond #信頼マップ');
 
       window.open(
-        `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+        `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${quote}`,
         '_blank',
         'width=550,height=420'
       );
@@ -409,16 +390,10 @@ export default function ShareableTrustMap({
             )}
           </button>
           <button
-            onClick={handleShare}
-            disabled={isSharing}
-            className="inline-flex items-center rounded-lg border border-blue-500 bg-blue-500 px-3 py-2 text-xs sm:text-sm sm:px-4 font-medium text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={handleCopyUrl}
+            className="inline-flex items-center rounded-lg border border-blue-500 bg-blue-500 px-3 py-2 text-xs sm:text-sm sm:px-4 font-medium text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            {isSharing ? (
-              <>
-                <Loader2 className="mr-1 sm:mr-2 h-4 w-4 animate-spin" />
-                <span className="hidden sm:inline">シェア中...</span>
-              </>
-            ) : copied ? (
+            {copied ? (
               <>
                 <Check className="mr-1 sm:mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">コピーしました</span>

@@ -383,15 +383,25 @@ export default function UserProfilePage() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-ash-surface/30 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Eye className="w-8 h-8 text-red-600" />
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">アクセスできません</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Link href="/users" className="btn-dark">
-            他のユーザーを見る
-          </Link>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">直接の繋がりがありません</h1>
+          <p className="text-gray-600 mb-6">
+            このユーザーのプロフィールを閲覧するには、まず繋がりを作る必要があります。
+            共通の知り合いを通じて紹介してもらうか、メッセージを送って繋がりましょう。
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/users" className="btn-dark inline-flex items-center justify-center gap-2">
+              <Users className="w-4 h-4" />
+              ユーザーを探す
+            </Link>
+            <Link href="/trust-map" className="btn-ol inline-flex items-center justify-center gap-2">
+              <Eye className="w-4 h-4" />
+              信頼マップを見る
+            </Link>
+          </div>
         </div>
       </div>
     )

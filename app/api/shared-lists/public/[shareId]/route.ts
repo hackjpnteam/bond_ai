@@ -5,6 +5,7 @@ import SharedList from '@/models/SharedList';
 import SavedItem from '@/models/SavedItem';
 import SharedListItem from '@/models/SharedListItem';
 import SharedListView from '@/models/SharedListView';
+import SharedListEditHistory from '@/models/SharedListEditHistory';
 import User from '@/models/User';
 import Notification from '@/models/Notification';
 import Evaluation from '@/models/Evaluation';
@@ -115,6 +116,23 @@ export async function GET(request: NextRequest) {
         .select('_id name image company')
         .lean();
     }
+
+    // 訪問者情報を取得（オーナー以外で閲覧したユーザー）
+    const visitors = await SharedListView.find({ sharedListId: sharedList._id })
+      .sort({ viewedAt: -1 })
+      .limit(50)
+      .populate('userId', '_id name image company')
+      .lean();
+
+    const visitorUsers = visitors
+      .filter((v: any) => v.userId && v.userId._id.toString() !== sharedList.ownerId.toString())
+      .map((v: any) => ({
+        id: v.userId._id.toString(),
+        name: v.userId.name,
+        image: v.userId.image,
+        company: v.userId.company,
+        viewedAt: v.viewedAt
+      }));
 
     // タグベースのアイテムを取得
     const savedItems = await SavedItem.find({
@@ -305,6 +323,7 @@ export async function GET(request: NextRequest) {
           canEdit,
           isOwner: isOwnerUser,
           owner: owner ? {
+            id: sharedList.ownerId.toString(),
             name: owner.name,
             image: owner.image,
             company: owner.company
@@ -314,7 +333,8 @@ export async function GET(request: NextRequest) {
             name: user.name,
             image: user.image,
             company: user.company
-          }))
+          })),
+          visitors: visitorUsers
         },
         items: savedItems.map(item => ({
           id: item._id.toString(),
@@ -688,6 +708,47 @@ export async function PUT(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' }
         }
       );
+    }
+
+    // 編集履歴を保存
+    if (authUser?.id) {
+      const itemName = result.itemData?.name || result.name || 'アイテム';
+
+      if (notes !== undefined) {
+        await SharedListEditHistory.create({
+          sharedListId: sharedList._id,
+          userId: authUser.id,
+          action: 'update_notes',
+          itemId: itemId,
+          itemName: itemName,
+          field: 'notes',
+          newValue: notes?.substring(0, 500)
+        });
+      }
+
+      if (tags !== undefined) {
+        await SharedListEditHistory.create({
+          sharedListId: sharedList._id,
+          userId: authUser.id,
+          action: 'update_tags',
+          itemId: itemId,
+          itemName: itemName,
+          field: 'tags',
+          newValue: Array.isArray(tags) ? tags.join(', ') : tags
+        });
+      }
+
+      if (description !== undefined) {
+        await SharedListEditHistory.create({
+          sharedListId: sharedList._id,
+          userId: authUser.id,
+          action: 'update_description',
+          itemId: itemId,
+          itemName: itemName,
+          field: 'description',
+          newValue: description?.substring(0, 500)
+        });
+      }
     }
 
     return new Response(

@@ -900,8 +900,42 @@ export default function ListsPage() {
   const getSummary = (description: string | undefined, maxLength: number = 300): string => {
     if (!description) return '';
 
+    let text = description;
+
+    // まず、リテラルな\n（2文字）で次セクションを切り取る
+    const literalCutPatterns = [
+      '\\n## 2.',
+      '\\n## 3.',
+      '\\n2. 会社概要',
+      '\\n3. 事業',
+      '\\n## 会社概要',
+    ];
+    for (const pattern of literalCutPatterns) {
+      const idx = text.indexOf(pattern);
+      if (idx !== -1) {
+        text = text.substring(0, idx);
+      }
+    }
+
+    // リテラルな\nを実際の改行に変換
+    text = text.split('\\n').join('\n').split('\\r').join('');
+
+    // 実際の改行でも次セクションを切り取る
+    const realCutPatterns = [
+      /\n##\s*2\./,
+      /\n##\s*3\./,
+      /\n2\.\s*会社概要/,
+      /\n3\.\s*事業/,
+    ];
+    for (const pattern of realCutPatterns) {
+      const match = text.search(pattern);
+      if (match !== -1) {
+        text = text.substring(0, match);
+      }
+    }
+
     // Markdownの見出し、リスト、強調などを除去
-    let text = description
+    text = text
       .replace(/^#+\s+.*$/gm, '') // 見出し除去
       .replace(/^\*\*.*\*\*$/gm, '') // 強調行除去
       .replace(/^\*.*$/gm, '') // リスト項目の先頭行除去
@@ -912,26 +946,27 @@ export default function ListsPage() {
       .replace(/^---+$/gm, '') // 水平線除去
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // リンクをテキストに
       .replace(/`([^`]+)`/g, '$1') // コード除去
-      .replace(/\n{2,}/g, '\n') // 連続改行を1つに
+      .replace(/\n{2,}/g, ' ') // 連続改行をスペースに
+      .replace(/\n/g, ' ') // 改行をスペースに
+      .replace(/\s{2,}/g, ' ') // 連続スペースを1つに
       .trim();
 
-    // 「概要」セクションを探して抽出
-    const overviewMatch = text.match(/概要[：:]\s*\n?([\s\S]*?)(?=\n\n|$)/i) ||
-                         text.match(/1\.\s*概要\s*\n?([\s\S]*?)(?=\n\n2\.|$)/i);
-    if (overviewMatch) {
-      text = overviewMatch[1].trim();
-    }
-
-    // 最初の意味のある文章を取得
-    const lines = text.split('\n').filter(line => line.trim().length > 10);
-    text = lines.slice(0, 3).join(' ').trim();
+    // 「概要」セクション見出しを除去
+    text = text.replace(/^(##?\s*)?(1\.\s*)?概要[：:\s]*/i, '');
 
     // 長さ制限
     if (text.length > maxLength) {
-      text = text.substring(0, maxLength - 3) + '...';
+      text = text.substring(0, maxLength);
+      // 文の途中で切れないように、最後の句点で切る
+      const lastPeriod = text.lastIndexOf('。');
+      if (lastPeriod > maxLength * 0.5) {
+        text = text.substring(0, lastPeriod + 1);
+      } else {
+        text = text + '...';
+      }
     }
 
-    return text || description.substring(0, maxLength);
+    return text;
   };
 
   const getItemIcon = (type: string) => {

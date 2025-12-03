@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, User, Package, Search, ExternalLink, Calendar, Tag, MessageSquare, Eye, ArrowLeft, Loader2, Edit2, Edit3, Plus, X, Save, Trash2, Globe, Link as LinkIcon, Lock, UserPlus, Users, ArrowUpDown, Star, SortAsc, Hash, ChevronDown, ChevronUp, Heart, ThumbsUp, MessageCircle, Send, MoreVertical, FileText, StickyNote } from 'lucide-react';
+import { Building2, User, Package, Search, ExternalLink, Calendar, Tag, MessageSquare, Eye, ArrowLeft, Loader2, Edit2, Edit3, Plus, X, Save, Trash2, Globe, Link as LinkIcon, Lock, UserPlus, Users, ArrowUpDown, Star, SortAsc, Hash, ChevronDown, ChevronUp, Heart, ThumbsUp, MessageCircle, Send, MoreVertical, FileText, StickyNote, Image, Upload, History, Clock } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
@@ -83,6 +83,14 @@ interface SharedUser {
   company?: string;
 }
 
+interface VisitorUser {
+  id: string;
+  name: string;
+  image?: string;
+  company?: string;
+  viewedAt: string;
+}
+
 interface SharedListData {
   id: string;
   shareId: string;
@@ -91,16 +99,35 @@ interface SharedListData {
   tags: string[];
   isPublic: boolean;
   visibility: VisibilityType;
+  editPermission?: string;
   viewCount: number;
   createdAt: string;
   canEdit: boolean;
   isOwner: boolean;
   owner: {
+    id: string;
     name: string;
     image?: string;
     company?: string;
   } | null;
   sharedWith?: SharedUser[];
+  visitors?: VisitorUser[];
+}
+
+interface EditHistoryItem {
+  id: string;
+  action: string;
+  itemId?: string;
+  itemName?: string;
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+  user: {
+    id?: string;
+    name: string;
+    image?: string;
+  };
+  createdAt: string;
 }
 
 interface Props {
@@ -161,6 +188,11 @@ export default function SharedListClient({ shareId }: Props) {
   // 編集メニュー（ドロップダウン）
   const [openEditMenuId, setOpenEditMenuId] = useState<string | null>(null);
 
+  // ロゴ編集
+  const [editingLogoItemId, setEditingLogoItemId] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useState<HTMLInputElement | null>(null);
+
   // 招待者管理
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteSearchQuery, setInviteSearchQuery] = useState('');
@@ -194,6 +226,11 @@ export default function SharedListClient({ shareId }: Props) {
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [submittingReply, setSubmittingReply] = useState<string | null>(null);
+
+  // 編集履歴
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [editHistory, setEditHistory] = useState<EditHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // 関係性オプション
   const RELATIONSHIP_OPTIONS = [
@@ -278,6 +315,62 @@ export default function SharedListClient({ shareId }: Props) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 編集履歴を取得
+  const fetchEditHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const response = await fetch(`/api/shared-lists/public/${shareId}/history`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setEditHistory(data.history || []);
+      } else {
+        toast.error('編集履歴の取得に失敗しました');
+      }
+    } catch (err) {
+      console.error('Error fetching edit history:', err);
+      toast.error('編集履歴の取得に失敗しました');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // 履歴モーダルを開く
+  const openHistoryModal = () => {
+    setShowHistoryModal(true);
+    fetchEditHistory();
+  };
+
+  // 編集アクションを日本語に変換
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case 'update_description': return '概要を編集';
+      case 'update_notes': return 'メモを編集';
+      case 'update_tags': return 'タグを編集';
+      case 'update_logo': return 'ロゴを編集';
+      case 'add_item': return 'アイテムを追加';
+      case 'remove_item': return 'アイテムを削除';
+      case 'update_settings': return '設定を変更';
+      default: return action;
+    }
+  };
+
+  // 相対時間を取得
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'たった今';
+    if (minutes < 60) return `${minutes}分前`;
+    if (hours < 24) return `${hours}時間前`;
+    if (days < 7) return `${days}日前`;
+    return date.toLocaleDateString('ja-JP');
   };
 
   const handleSaveHeader = async () => {
@@ -881,7 +974,8 @@ export default function SharedListClient({ shareId }: Props) {
   // 編集前のログインチェック
   const requireLoginForEdit = (): boolean => {
     if (!isLoggedIn) {
-      toast.error('編集するにはログインが必要です');
+      toast.info('編集するにはログインが必要です');
+      router.push(`/login?redirect=/lists/share/${shareId}`);
       return false;
     }
     return true;
@@ -1007,6 +1101,55 @@ export default function SharedListClient({ shareId }: Props) {
       toast.error('概要の更新に失敗しました');
     } finally {
       setSavingItemEdit(false);
+    }
+  };
+
+  // ロゴをアップロード
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, itemId: string, source: 'saved' | 'shared', slug: string, itemName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // ファイルサイズチェック（2MB制限）
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('ファイルサイズは2MB以下にしてください');
+      return;
+    }
+
+    // 画像形式チェック
+    if (!file.type.startsWith('image/')) {
+      toast.error('画像ファイルを選択してください');
+      return;
+    }
+
+    setUploadingLogo(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+      formData.append('slug', slug);
+      formData.append('shareId', shareId);
+      formData.append('itemName', itemName);
+
+      const response = await fetch('/api/company-logo/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success('ロゴを更新しました');
+        // ページをリロードしてロゴを再読み込み
+        window.location.reload();
+      } else {
+        toast.error(data.error || 'ロゴのアップロードに失敗しました');
+      }
+    } catch (err) {
+      console.error('Error uploading logo:', err);
+      toast.error('ロゴのアップロードに失敗しました');
+    } finally {
+      setUploadingLogo(false);
+      setEditingLogoItemId(null);
     }
   };
 
@@ -1163,16 +1306,68 @@ export default function SharedListClient({ shareId }: Props) {
       .replace(/^```json\s*\{[\s\S]*?"answer"\s*:\s*"([\s\S]*?)"\s*\}[\s\S]*?```$/gm, '$1')
       // ```json ... ``` を除去
       .replace(/```json[\s\S]*?```/g, '')
-      .replace(/```[\s\S]*?```/g, '')
-      // エスケープされた改行を実際の改行に
-      .replace(/\\n/g, '\n');
+      .replace(/```[\s\S]*?```/g, '');
 
-    // 「概要」セクションを優先的に抽出
-    const overviewMatch = cleanText.match(/(?:^|\n)(?:#{1,2}\s*)?(?:\d+\.\s*)?概要[：:\s]*\n?([\s\S]*?)(?=\n#{1,2}\s|\n\d+\.\s|$)/i);
-    let targetText = cleanText;
+    // 「## 2. 会社概要」などの次セクション以降を完全に削除（\nがリテラルかどうかに関わらず）
+    // まずリテラルな\nのパターンで切る
+    const literalSectionPatterns = [
+      '\\n## 2.',
+      '\\n## 3.',
+      '\\n2. 会社概要',
+      '\\n3. 事業',
+      '\\n## 会社概要',
+    ];
 
-    if (overviewMatch && overviewMatch[1] && overviewMatch[1].trim().length > 30) {
-      targetText = overviewMatch[1];
+    for (const pattern of literalSectionPatterns) {
+      const idx = cleanText.indexOf(pattern);
+      if (idx !== -1) {
+        cleanText = cleanText.substring(0, idx);
+      }
+    }
+
+    // 実際の改行でのパターンでも切る
+    const realSectionPatterns = [
+      /\n##\s*2\./,
+      /\n##\s*3\./,
+      /\n2\.\s*会社概要/,
+      /\n3\.\s*事業/,
+      /\n##\s*会社概要/,
+    ];
+
+    for (const pattern of realSectionPatterns) {
+      const match = cleanText.search(pattern);
+      if (match !== -1) {
+        cleanText = cleanText.substring(0, match);
+      }
+    }
+
+    // リテラルな\nを実際の改行に変換（セクション切り取り後に行う）
+    cleanText = cleanText.replace(/\\n/g, '\n').replace(/\\r/g, '');
+
+    // 「1. 概要」「## 1. 概要」セクションの内容を抽出
+    const overviewMatch = cleanText.match(/(?:^|\n)(?:#{1,2}\s*)?(?:1\.\s*)?概要[：:\s]*\n?([\s\S]*?)$/i);
+    let targetText = '';
+
+    if (overviewMatch && overviewMatch[1] && overviewMatch[1].trim().length > 20) {
+      targetText = overviewMatch[1].trim();
+    } else {
+      // 概要セクションが見つからない場合、最初の段落を使用
+      // 見出しを除いた最初の本文テキストを取得
+      const lines = cleanText.split('\n');
+      const contentLines: string[] = [];
+      for (const line of lines) {
+        const trimmed = line.trim();
+        // 見出し行（#で始まる、または「数字. タイトル」形式）をスキップ
+        if (trimmed.startsWith('#') || /^\d+\.\s+[^\s]{1,30}$/.test(trimmed)) {
+          continue;
+        }
+        if (trimmed.length > 0) {
+          contentLines.push(trimmed);
+          // 300文字程度集まったら終了
+          if (contentLines.join(' ').length > 350) break;
+        }
+      }
+      targetText = contentLines.join(' ');
     }
 
     // マークダウンの見出し、リンク、強調などを除去
@@ -1409,6 +1604,61 @@ export default function SharedListClient({ shareId }: Props) {
                     </div>
                   )}
 
+                  {/* 招待者管理セクション（編集モード） */}
+                  {sharedList.isOwner && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">招待者</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowInviteModal(true)}
+                          className="flex items-center gap-1 text-xs text-bond-pink hover:text-pink-600 transition-colors"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          招待者を追加
+                        </button>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-3 min-h-[60px]">
+                        {sharedList.sharedWith && sharedList.sharedWith.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {sharedList.sharedWith.map((user) => (
+                              <div
+                                key={user.id}
+                                className="flex items-center gap-2 bg-white rounded-lg px-2.5 py-1.5 border border-gray-200 group"
+                              >
+                                {user.image ? (
+                                  <img
+                                    src={user.image}
+                                    alt={user.name}
+                                    className="h-5 w-5 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-5 w-5 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <User className="h-3 w-3 text-gray-400" />
+                                  </div>
+                                )}
+                                <span className="text-sm text-gray-700">{user.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveInvitee(user.id)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors ml-1"
+                                  title="削除"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-sm text-gray-400">
+                            <UserPlus className="h-4 w-4 mr-1.5" />
+                            招待者がいません
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <Button
                       onClick={handleSaveHeader}
@@ -1436,7 +1686,10 @@ export default function SharedListClient({ shareId }: Props) {
                     <h1 className="text-2xl font-bold text-gray-900">{sharedList.title}</h1>
                     {sharedList.canEdit && (
                       <button
-                        onClick={() => setIsEditingHeader(true)}
+                        onClick={() => {
+                          if (!requireLoginForEdit()) return;
+                          setIsEditingHeader(true);
+                        }}
                         className="p-1.5 text-gray-400 hover:text-bond-pink hover:bg-pink-50 rounded-lg transition-colors"
                       >
                         <Edit2 className="h-4 w-4" />
@@ -1460,21 +1713,27 @@ export default function SharedListClient({ shareId }: Props) {
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-500 mt-3">
                 {sharedList.owner && (
                   <div className="flex items-center gap-2">
-                    {sharedList.owner.image ? (
-                      <img
-                        src={sharedList.owner.image}
-                        alt={sharedList.owner.name}
-                        className="h-6 w-6 rounded-full ring-2 ring-white"
-                      />
-                    ) : (
-                      <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center">
-                        <User className="h-4 w-4 text-gray-400" />
-                      </div>
-                    )}
-                    <span className="font-medium text-gray-700">{sharedList.owner.name}</span>
-                    {sharedList.owner.company && (
-                      <span className="text-gray-400">@ {sharedList.owner.company}</span>
-                    )}
+                    <span className="text-gray-500">作成者</span>
+                    <Link
+                      href={`/trust-map/${sharedList.owner.id}`}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
+                      {sharedList.owner.image ? (
+                        <img
+                          src={sharedList.owner.image}
+                          alt={sharedList.owner.name}
+                          className="h-6 w-6 rounded-full ring-2 ring-white"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center">
+                          <User className="h-4 w-4 text-gray-400" />
+                        </div>
+                      )}
+                      <span className="font-medium text-gray-700 hover:text-bond-pink">{sharedList.owner.name}</span>
+                      {sharedList.owner.company && (
+                        <span className="text-gray-400">@ {sharedList.owner.company}</span>
+                      )}
+                    </Link>
                   </div>
                 )}
                 <div className="flex items-center gap-3 sm:gap-4">
@@ -1486,6 +1745,13 @@ export default function SharedListClient({ shareId }: Props) {
                     <Calendar className="h-4 w-4" />
                     <span>{formatDate(sharedList.createdAt)}</span>
                   </div>
+                  <button
+                    onClick={openHistoryModal}
+                    className="flex items-center gap-1 text-gray-500 hover:text-bond-pink transition-colors"
+                  >
+                    <History className="h-4 w-4" />
+                    <span>履歴</span>
+                  </button>
                 </div>
               </div>
 
@@ -1592,20 +1858,20 @@ export default function SharedListClient({ shareId }: Props) {
                 </div>
               )}
 
-              {/* 招待者表示（非オーナー用 - 閲覧のみ） */}
-              {!sharedList.isOwner && sharedList.sharedWith && sharedList.sharedWith.length > 0 && (
+              {/* 訪問者表示（全ユーザー） */}
+              {sharedList.visitors && sharedList.visitors.length > 0 && !isEditingHeader && (
                 <div className="mt-3 flex items-center gap-2">
                   <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Users className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5" />
                     <span>参加者:</span>
                   </div>
                   <div className="flex items-center -space-x-2">
-                    {sharedList.sharedWith.slice(0, 5).map((user) => (
-                      <div key={user.id} className="relative group" title={user.name}>
-                        {user.image ? (
+                    {sharedList.visitors.slice(0, 8).map((visitor) => (
+                      <div key={visitor.id} className="relative group" title={visitor.name}>
+                        {visitor.image ? (
                           <img
-                            src={user.image}
-                            alt={user.name}
+                            src={visitor.image}
+                            alt={visitor.name}
                             className="h-7 w-7 rounded-full ring-2 ring-white object-cover"
                           />
                         ) : (
@@ -1613,11 +1879,15 @@ export default function SharedListClient({ shareId }: Props) {
                             <User className="h-4 w-4 text-gray-400" />
                           </div>
                         )}
+                        {/* ホバー時のツールチップ */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                          {visitor.name}
+                        </div>
                       </div>
                     ))}
-                    {sharedList.sharedWith.length > 5 && (
+                    {sharedList.visitors.length > 8 && (
                       <div className="h-7 w-7 rounded-full bg-gray-100 ring-2 ring-white flex items-center justify-center text-xs text-gray-600 font-medium">
-                        +{sharedList.sharedWith.length - 5}
+                        +{sharedList.visitors.length - 8}
                       </div>
                     )}
                   </div>
@@ -1774,6 +2044,23 @@ export default function SharedListClient({ shareId }: Props) {
                               <StickyNote className="h-4 w-4" />
                               メモを編集
                             </button>
+                            {(item.itemType === 'company' || item.itemType === 'search_result') && (
+                              <label className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-bond-pink transition-colors cursor-pointer">
+                                <Image className="h-4 w-4" />
+                                ロゴを編集
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const slug = item.itemData.slug || item.itemData.name.toLowerCase();
+                                    handleLogoUpload(e, item.id, item.source, slug, item.itemData.name);
+                                    setOpenEditMenuId(null);
+                                  }}
+                                  disabled={uploadingLogo}
+                                />
+                              </label>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2228,6 +2515,83 @@ export default function SharedListClient({ shareId }: Props) {
           </div>
         )}
       </div>
+
+      {/* 編集履歴モーダル */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-bond-pink to-pink-400 px-6 py-4 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-white" />
+                  <h2 className="text-lg font-bold text-white">編集履歴</h2>
+                </div>
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-bond-pink" />
+                </div>
+              ) : editHistory.length === 0 ? (
+                <div className="text-center py-12">
+                  <History className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">編集履歴はまだありません</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {editHistory.map((item) => (
+                    <div key={item.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <div className="flex items-start gap-3">
+                        {item.user.image ? (
+                          <img
+                            src={item.user.image}
+                            alt={item.user.name}
+                            className="h-10 w-10 rounded-full ring-2 ring-white"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <User className="h-5 w-5 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-gray-900">{item.user.name}</span>
+                            <span className="text-gray-400">が</span>
+                            {item.itemName && (
+                              <span className="font-medium text-bond-pink">{item.itemName}</span>
+                            )}
+                            <span className="text-gray-600">の</span>
+                            <Badge variant="secondary" className="bg-pink-50 text-pink-600">
+                              {getActionLabel(item.action)}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{getRelativeTime(item.createdAt)}</span>
+                          </div>
+                          {item.newValue && item.action !== 'update_logo' && (
+                            <div className="mt-2 text-sm text-gray-600 bg-white rounded-lg p-2 border border-gray-100">
+                              {item.newValue.length > 200 ? item.newValue.slice(0, 200) + '...' : item.newValue}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 評価投稿モーダル */}
       {showEvaluationModal && evaluationTargetItem && (

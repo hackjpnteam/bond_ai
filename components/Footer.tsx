@@ -24,7 +24,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t border-ash-line mt-6 md:mt-8 pt-6 md:pt-8 text-center text-xs md:text-sm">
-          <p>© 2025 Bond ver1.3.1. All rights reserved.</p>
+          <p>© 2025 Bond ver1.4.3. All rights reserved.</p>
         </div>
       </div>
     </footer>

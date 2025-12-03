@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, User, Building2, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Briefcase, GraduationCap, Award, Globe, Twitter, Linkedin, Camera, Loader2, RefreshCw } from 'lucide-react';
+import { Star, User, Building2, Eye, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Briefcase, GraduationCap, Award, Globe, Twitter, Linkedin, Camera, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { getUserDisplayName } from '@/lib/user-display';
@@ -762,11 +762,11 @@ URL: ${window.location.href}`;
               </div>
             )}
 
-            {/* 検索回数 */}
+            {/* 閲覧回数 */}
             <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-6">
               <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600">
-                <TrendingUp className="w-4 h-4" />
-                <span>{personData.searchCount}回検索</span>
+                <Eye className="w-4 h-4" />
+                <span>{personData.searchCount}回閲覧</span>
               </div>
               {personData.averageRating > 0 && (
                 <div className="flex items-center gap-2">

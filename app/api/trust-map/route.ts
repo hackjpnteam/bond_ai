@@ -118,7 +118,7 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
   let connectedUsers: any[] = [];
   let connectedUsersCompanies: any[] = [];
 
-  console.log('Current user:', currentUser ? currentUser.name : 'Not found');
+  console.log('Current user:', currentUser ? `${currentUser.name} (${currentUser._id})` : 'Not found');
 
   if (currentUser) {
     // データベースから直接接続を取得
@@ -128,11 +128,18 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
     }).toArray();
 
     console.log('Found connections:', connections.length);
+    if (connections.length > 0) {
+      connections.forEach((conn, i) => {
+        console.log(`Connection ${i}: users=[${conn.users?.map((u: any) => u.toString()).join(', ')}], status=${conn.status}`);
+      });
+    }
 
     // 他のユーザーIDを一括取得
     const otherUserIds = connections
       .map(conn => conn.users.find((id: any) => id.toString() !== currentUser._id.toString()))
       .filter(Boolean);
+
+    console.log('Other user IDs:', otherUserIds.map((id: any) => id.toString()));
 
     if (otherUserIds.length > 0) {
       // ユーザー情報を一括取得
@@ -172,7 +179,7 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
           connectedUsername = otherUser.email?.split('@')[0] || otherUser.name;
         }
 
-        connectedUsers.push({
+        const connectedUserEntry = {
           id: connectedUsername,
           name: otherUser.name,
           type: "person",
@@ -182,7 +189,9 @@ export const GET = requireAuth(async (request: NextRequest, user) => {
           strength: connectionStrengthMap.get(otherUserId.toString()) || 1,
           userId: otherUser._id.toString(),
           reviewCount: 0
-        });
+        };
+        console.log('Adding connected user:', connectedUserEntry.name, connectedUserEntry.id);
+        connectedUsers.push(connectedUserEntry);
       }
     }
 

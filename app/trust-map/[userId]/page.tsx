@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ShareableTrustMap from '@/components/trust-map/ShareableTrustMap';
 import { LockedFeature } from '@/components/OnboardingBanner';
@@ -118,9 +118,13 @@ export default function UserTrustMapPage() {
   const [showCompanies, setShowCompanies] = useState(true);
   const [showUsers, setShowUsers] = useState(true);
   const [relationshipFilter, setRelationshipFilter] = useState<number | 'all'>('all');
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
     if (!userId) return;
+    // Strict Modeでの二重実行を防止
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
 
     // まず自分のトラストマップデータを取得してオーナーかどうか確認
     fetch('/api/trust-map')
@@ -152,6 +156,13 @@ export default function UserTrustMapPage() {
   // → リンクが切れたノードは外に飛んでいき、戻ると中央に戻ってくるUI
   const graphData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
+
+    // APIレスポンスのデバッグ
+    console.log('=== [userId] Page - API Response Debug ===');
+    console.log('data.companies count:', data.companies?.length);
+    console.log('data.connectedUsersCompanies count:', data.connectedUsersCompanies?.length);
+    console.log('data.users count:', data.users?.length);
+    console.log('data.connectedUsersCompanies:', data.connectedUsersCompanies?.map(c => ({ id: c.id, reviewedBy: c.reviewedBy })));
 
     // 全ての企業を統合（フィルタリング前の完全なリスト）
     const allCompanyMap = new Map();
@@ -189,11 +200,47 @@ export default function UserTrustMapPage() {
     const allCompanies = Array.from(allCompanyMap.values());
     const allUsers = data.users || [];
 
+    // connectedUsersCompaniesのレビュアーがdata.usersに存在しない場合、ノードとして追加
+    // これにより、リンクのソースノードが必ず存在することを保証する
+    const userIdSet = new Set(allUsers.map((u: any) => u.id));
+    const additionalUsers: any[] = [];
+
+    allCompanies.forEach((company: any) => {
+      company.reviewers?.forEach((reviewer: any) => {
+        if (reviewer.name && reviewer.name !== data.me.id && !userIdSet.has(reviewer.name)) {
+          // このレビュアーはdata.usersに存在しないので追加
+          userIdSet.add(reviewer.name);
+          additionalUsers.push({
+            id: reviewer.name,
+            name: reviewer.displayName || reviewer.name,
+            type: 'person',
+            imageUrl: '/default-avatar.png',
+            reviewCount: 0,
+            strength: 1
+          });
+          console.log('Added missing reviewer as node:', reviewer.name);
+        }
+      });
+    });
+
+    // 追加のユーザーを結合
+    const allUsersWithReviewers = [...allUsers, ...additionalUsers];
+
+    // 自分が直接評価した企業のIDリスト
+    const myDirectCompanyIds = new Set(
+      data.companies.map((c: any) => normalizeCompanyName(c.id))
+    );
+
     // ノードは常に全て表示（フィルタリングしない）
+    // 繋がりのあるユーザー経由のノードにはフラグを付ける
     const nodes = [
       { ...data.me, displayName: data.me.name },
-      ...allCompanies,
-      ...allUsers.map((u: any) => ({ ...u, displayName: u.name }))
+      ...allCompanies.map((company: any) => ({
+        ...company,
+        // 自分が直接評価していない企業は繋がりのあるユーザー経由のノード
+        isConnectedUserNode: !myDirectCompanyIds.has(company.id)
+      })),
+      ...allUsersWithReviewers.map((u: any) => ({ ...u, displayName: u.name }))
     ];
 
     // リンクだけをフィルタリング
@@ -213,22 +260,55 @@ export default function UserTrustMapPage() {
           return;
         }
 
+        // 自分以外のレビューアからのリンクは繋がりのあるユーザー経由のリンク
+        const isConnectedUserLink = reviewer.name !== data.me.id;
+
         companyLinks.push({
           source: reviewer.name,
           target: company.id,
-          strength: reviewer.strength || 1
+          strength: reviewer.strength || 1,
+          isConnectedUserLink
         });
       });
     });
 
     // 人物へのリンク（人物非表示の場合はリンクを作成しない）
+    // 人物へのリンクは直接のつながりなのでisConnectedUserLinkはfalse
+    // 追加されたレビュアー（additionalUsers）へのリンクは作成しない（中央ノードと直接接続していないため）
     const userLinks = showUsers ? allUsers.map((u: any) => ({
       source: data.me.id,
       target: u.id,
-      strength: u.strength || 1
+      strength: u.strength || 1,
+      isConnectedUserLink: false
     })) : [];
 
     const links = [...companyLinks, ...userLinks];
+
+    // デバッグログ
+    console.log('=== [userId] Page - Graph Data ===');
+    console.log('Me ID:', data.me.id);
+    console.log('All Users (from API):', allUsers.map(u => ({ id: u.id, name: u.name })));
+    console.log('Additional Users (missing reviewers):', additionalUsers.map(u => ({ id: u.id, name: u.name })));
+    console.log('All Users With Reviewers:', allUsersWithReviewers.map(u => ({ id: u.id, name: u.name })));
+    console.log('Person Nodes:', nodes.filter(n => n.type === 'person').map(n => n.id));
+    console.log('Org Nodes count:', nodes.filter(n => n.type === 'org').length);
+    console.log('Company Links count:', companyLinks.length);
+    console.log('User Links count:', userLinks.length);
+    console.log('All Companies with reviewers:', allCompanies.map(c => ({ id: c.id, reviewers: c.reviewers?.map((r: any) => r.name) })));
+
+    // ギグーのリンクを特定
+    const gigooLinks = companyLinks.filter(l => l.target === 'ギグー' || l.source === 'ギグー');
+    console.log('Gigoo Links:', gigooLinks);
+    // gigooLinksのソースがノードに存在するか確認
+    gigooLinks.forEach(link => {
+      const sourceExists = nodes.some(n => n.id === link.source);
+      const targetExists = nodes.some(n => n.id === link.target);
+      console.log(`  Link source=${link.source} exists=${sourceExists}, target=${link.target} exists=${targetExists}`);
+    });
+
+    // muraooo0302のリンクを特定
+    const muraokLinks = companyLinks.filter(l => l.source === 'muraooo0302' || l.target === 'muraooo0302');
+    console.log('muraooo0302 Links:', muraokLinks);
 
     return { nodes, links };
   }, [data, showCompanies, showUsers, relationshipFilter]);

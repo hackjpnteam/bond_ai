@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, Building2, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Heart, MessageCircle, Send, ChevronDown, ChevronUp, User, Trash2, RefreshCw } from 'lucide-react';
+import { Star, Building2, Users, Eye, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Heart, MessageCircle, Send, ChevronDown, ChevronUp, User, Trash2, RefreshCw, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { getUserDisplayName } from '@/lib/user-display';
 import { getRelationshipLabel, RELATIONSHIP_OPTIONS, RELATIONSHIP_TYPES } from '@/lib/relationship';
@@ -203,6 +203,41 @@ export default function CompanyPage() {
       console.error('Error fetching search results:', error);
     }
     return [];
+  };
+
+  // 企業情報を再検索して更新
+  const handleRefreshCompanyInfo = async () => {
+    if (!currentUser?.id) {
+      toast.error('ログインが必要です');
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      const response = await fetch(`/api/companies/${encodeURIComponent(companySlug)}/refresh`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // 成功した場合、companyDataを更新
+        setCompanyData(prev => prev ? {
+          ...prev,
+          description: data.company.description,
+          editHistory: data.company.editHistory
+        } : prev);
+        toast.success('企業情報を更新しました');
+      } else {
+        toast.error(data.error || '企業情報の更新に失敗しました');
+      }
+    } catch (error) {
+      console.error('Error refreshing company info:', error);
+      toast.error('企業情報の更新に失敗しました');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -1751,8 +1786,8 @@ URL: ${window.location.href}`;
                 <span className="text-sm sm:text-base text-gray-600">({companyData.evaluations.length}件)</span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600">
-                <TrendingUp className="w-4 h-4" />
-                <span>{companyData.searchCount}回検索</span>
+                <Eye className="w-4 h-4" />
+                <span>{companyData.searchCount}回閲覧</span>
               </div>
             </div>
           </div>
@@ -1767,15 +1802,28 @@ URL: ${window.location.href}`;
                 <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base sm:text-lg">会社概要</CardTitle>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowHistory(!showHistory)}
-                      className="text-xs px-2 sm:px-3"
-                    >
-                      <History className="w-3 h-3" />
-                      <span className="hidden sm:inline ml-1">履歴</span>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefreshCompanyInfo}
+                        disabled={isRefreshing || !currentUser?.id}
+                        className="text-xs px-2 sm:px-3"
+                        title={!currentUser?.id ? 'ログインが必要です' : '企業情報を最新に更新'}
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <span className="hidden sm:inline ml-1">{isRefreshing ? '更新中...' : '更新'}</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowHistory(!showHistory)}
+                        className="text-xs px-2 sm:px-3"
+                      >
+                        <History className="w-3 h-3" />
+                        <span className="hidden sm:inline ml-1">履歴</span>
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="px-3 sm:px-6 py-3 sm:py-4">

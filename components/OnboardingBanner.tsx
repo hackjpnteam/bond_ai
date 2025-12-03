@@ -162,8 +162,7 @@ export function LockedFeature({
           {featureName}はロックされています
         </h2>
         <p className="text-gray-600 mb-6">
-          あと{remainingEvaluations}件の企業評価を投稿すると、
-          この機能を含む全ての機能が開放されます。
+          あと{remainingEvaluations}件評価でこの機能が開放されます。
         </p>
         <Link
           href="/search"

@@ -102,6 +102,13 @@ export default function TrustMapPage() {
   const graphData = useMemo(() => {
     if (!data) return { nodes: [], links: [] };
 
+    // APIレスポンスのデバッグ
+    console.log('=== API Response Debug ===');
+    console.log('data.companies count:', data.companies?.length);
+    console.log('data.connectedUsersCompanies count:', data.connectedUsersCompanies?.length);
+    console.log('data.users count:', data.users?.length);
+    console.log('data.connectedUsersCompanies:', data.connectedUsersCompanies?.map(c => ({ id: c.id, reviewedBy: c.reviewedBy })));
+
     // 全ての企業を統合（フィルタリング前の完全なリスト）
     const allCompanyMap = new Map();
 
@@ -138,11 +145,37 @@ export default function TrustMapPage() {
     const allCompanies = Array.from(allCompanyMap.values());
     const allUsers = data.users || [];
 
+    // connectedUsersCompaniesのレビュアーがdata.usersに存在しない場合、ノードとして追加
+    // これにより、リンクのソースノードが必ず存在することを保証する
+    const userIdSet = new Set(allUsers.map((u: any) => u.id));
+    const additionalUsers: any[] = [];
+
+    allCompanies.forEach((company: any) => {
+      company.reviewers?.forEach((reviewer: any) => {
+        if (reviewer.name && reviewer.name !== data.me.id && !userIdSet.has(reviewer.name)) {
+          // このレビュアーはdata.usersに存在しないので追加
+          userIdSet.add(reviewer.name);
+          additionalUsers.push({
+            id: reviewer.name,
+            name: reviewer.displayName || reviewer.name,
+            type: 'person',
+            imageUrl: '/default-avatar.png',
+            reviewCount: 0,
+            strength: 1
+          });
+          console.log('Added missing reviewer as node:', reviewer.name);
+        }
+      });
+    });
+
+    // 追加のユーザーを結合
+    const allUsersWithReviewers = [...allUsers, ...additionalUsers];
+
     // ノードは常に全て表示（フィルタリングしない）
     const nodes = [
       { ...data.me, displayName: data.me.name },
       ...allCompanies,
-      ...allUsers.map((u: any) => ({ ...u, displayName: u.name }))
+      ...allUsersWithReviewers.map((u: any) => ({ ...u, displayName: u.name }))
     ];
 
     // リンクだけをフィルタリング
@@ -178,6 +211,24 @@ export default function TrustMapPage() {
     })) : [];
 
     const links = [...companyLinks, ...userLinks];
+
+    // デバッグログ
+    console.log('=== Trust Map Page - Graph Data ===');
+    console.log('Me ID:', data.me.id);
+    console.log('All Users (from API):', allUsers.map(u => ({ id: u.id, name: u.name })));
+    console.log('Additional Users (missing reviewers):', additionalUsers.map(u => ({ id: u.id, name: u.name })));
+    console.log('Total Nodes:', nodes.length);
+    console.log('Person Nodes:', nodes.filter(n => n.type === 'person').map(n => n.id));
+    console.log('Org Nodes:', nodes.filter(n => n.type === 'org').map(n => n.id));
+    console.log('Company Links:', companyLinks.map(l => ({ source: l.source, target: l.target })));
+    console.log('User Links:', userLinks.map(l => ({ source: l.source, target: l.target })));
+    console.log('All Companies with reviewers:', allCompanies.map(c => ({ id: c.id, reviewers: c.reviewers?.map((r: any) => r.name) })));
+    // ギグーのリンクを特定
+    const gigooLinks = companyLinks.filter(l => l.target === 'ギグー' || l.source === 'ギグー');
+    console.log('Gigoo Links:', gigooLinks);
+    // muraooo0302のリンクを特定
+    const muraokLinks = companyLinks.filter(l => l.source === 'muraooo0302' || l.target === 'muraooo0302');
+    console.log('muraooo0302 Links:', muraokLinks);
 
     return { nodes, links };
   }, [data, showCompanies, showUsers, relationshipFilter]);

@@ -3,8 +3,8 @@ import { requireAuth } from '@/lib/auth-middleware';
 import connectDB from '@/lib/mongodb';
 import SavedItem from '@/models/SavedItem';
 
-// PUT /api/saved-items/[id] - 保存済みアイテムを更新（タグなど）
-export const PUT = requireAuth(async (request: NextRequest, user) => {
+// PUT/PATCH /api/saved-items/[id] - 保存済みアイテムを更新（タグなど）
+const updateHandler = requireAuth(async (request: NextRequest, user) => {
   try {
     await connectDB();
 
@@ -24,15 +24,19 @@ export const PUT = requireAuth(async (request: NextRequest, user) => {
     }
 
     const body = await request.json();
-    const { tags, notes } = body;
+    const { tags, notes, itemData } = body;
 
     // 更新データを準備
-    const updateData: { tags?: string[]; notes?: string } = {};
+    const updateData: { tags?: string[]; notes?: string; 'itemData.description'?: string } = {};
     if (tags !== undefined) {
       updateData.tags = tags;
     }
     if (notes !== undefined) {
       updateData.notes = notes;
+    }
+    // itemData.descriptionの更新をサポート
+    if (itemData?.description !== undefined) {
+      updateData['itemData.description'] = itemData.description;
     }
 
     // 更新実行（ユーザーIDとアイテムIDの両方で制限）
@@ -85,6 +89,9 @@ export const PUT = requireAuth(async (request: NextRequest, user) => {
     );
   }
 });
+
+export const PUT = updateHandler;
+export const PATCH = updateHandler;
 
 // DELETE /api/saved-items/[id] - 保存済みアイテムを削除
 export const DELETE = requireAuth(async (request: NextRequest, user) => {

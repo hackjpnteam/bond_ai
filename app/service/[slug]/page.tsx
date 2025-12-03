@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, Package, Users, TrendingUp, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Heart, MessageCircle, Send, ChevronDown, ChevronUp, User, Trash2, RefreshCw } from 'lucide-react';
+import { Star, Package, Users, Eye, ExternalLink, Share2, BookmarkPlus, Edit3, Save, X, History, Clock, Search, Copy, FileDown, Check, Pencil, Heart, MessageCircle, Send, ChevronDown, ChevronUp, User, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { getUserDisplayName } from '@/lib/user-display';
@@ -1453,8 +1453,8 @@ URL: ${window.location.href}`;
                 <span className="text-sm sm:text-base text-gray-600">({serviceData.evaluations.length}件)</span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600">
-                <TrendingUp className="w-4 h-4" />
-                <span>{serviceData.searchCount}回検索</span>
+                <Eye className="w-4 h-4" />
+                <span>{serviceData.searchCount}回閲覧</span>
               </div>
             </div>
           </div>

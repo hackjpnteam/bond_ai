@@ -27,7 +27,11 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
     try {
-      await signIn('google', { callbackUrl: '/dashboard' })
+      // prompt: 'select_account' で常にアカウント選択画面を表示
+      await signIn('google', {
+        callbackUrl: '/dashboard',
+        prompt: 'select_account'
+      })
     } catch (error) {
       toast.error('Googleログインに失敗しました')
       setIsLoading(false)

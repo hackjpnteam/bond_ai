@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookmarkPlus, Building2, User, Search, Trash2, ExternalLink, Calendar, MapPin, Package, History, Clock, Tag, Plus, X, Pencil, MessageSquare, Check } from 'lucide-react';
+import { BookmarkPlus, Building2, User, Search, Trash2, ExternalLink, Calendar, MapPin, Package, History, Clock, Tag, Plus, X, Pencil, MessageSquare, Check, Share2, Copy, Link2, Users, Globe, Lock, Loader2, Mail, UserPlus, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { LockedFeature } from '@/components/OnboardingBanner';
@@ -52,7 +52,7 @@ export default function ListsPage() {
   const [ratedItems, setRatedItems] = useState<RatedItem[]>([]);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'saved' | 'rated' | 'history'>('saved');
+  const [activeTab, setActiveTab] = useState<'saved' | 'rated' | 'history' | 'shared'>('saved');
   const [filter, setFilter] = useState<'all' | 'company' | 'person' | 'service' | 'search_result'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingEvaluationId, setUpdatingEvaluationId] = useState<string | null>(null);
@@ -65,14 +65,362 @@ export default function ListsPage() {
   const [editingEvaluationRating, setEditingEvaluationRating] = useState(0);
   const [editingEvaluationComment, setEditingEvaluationComment] = useState('');
   const [editingEvaluationAnonymous, setEditingEvaluationAnonymous] = useState(false);
+  // 共有機能
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareTitle, setShareTitle] = useState('');
+  const [shareDescription, setShareDescription] = useState('');
+  const [selectedShareTags, setSelectedShareTags] = useState<string[]>([]);
+  const [shareIsPublic, setShareIsPublic] = useState(true);
+  const [creatingShare, setCreatingShare] = useState(false);
+  const [sharedLists, setSharedLists] = useState<any[]>([]);
+  const [showSharedListsModal, setShowSharedListsModal] = useState(false);
+  // 招待機能
+  const [inviteListId, setInviteListId] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [inviteSearchQuery, setInviteSearchQuery] = useState('');
+  const [inviteSearchResults, setInviteSearchResults] = useState<any[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  // 検索履歴から保存
+  const [savingHistoryId, setSavingHistoryId] = useState<string | null>(null);
+  const [historyTagInputId, setHistoryTagInputId] = useState<string | null>(null);
+  const [historyNewTag, setHistoryNewTag] = useState('');
 
   useEffect(() => {
     if (user) {
       fetchSavedItems();
       fetchRatedItems();
       fetchSearchHistory();
+      fetchSharedLists();
     }
   }, [user]);
+
+  const fetchSharedLists = async () => {
+    try {
+      const response = await fetch('/api/shared-lists', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSharedLists(data.sharedLists);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching shared lists:', error);
+    }
+  };
+
+  const handleCreateSharedList = async () => {
+    if (!shareTitle.trim() || selectedShareTags.length === 0) {
+      toast.error('タイトルとタグを選択してください');
+      return;
+    }
+
+    setCreatingShare(true);
+    try {
+      const response = await fetch('/api/shared-lists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: shareTitle,
+          description: shareDescription,
+          tags: selectedShareTags,
+          isPublic: shareIsPublic
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(`共有リストを作成しました（${data.itemCount}件のアイテム）`);
+        setSharedLists(prev => [data.sharedList, ...prev]);
+        setShowShareModal(false);
+        setShareTitle('');
+        setShareDescription('');
+        setSelectedShareTags([]);
+        setShareIsPublic(true);
+
+        // 共有URLをクリップボードにコピー
+        const shareUrl = `${window.location.origin}/lists/share/${data.sharedList.shareId}`;
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('共有URLをコピーしました');
+      } else {
+        toast.error(data.error || '共有リストの作成に失敗しました');
+      }
+    } catch (error) {
+      console.error('Error creating shared list:', error);
+      toast.error('共有リストの作成に失敗しました');
+    } finally {
+      setCreatingShare(false);
+    }
+  };
+
+  const handleDeleteSharedList = async (listId: string) => {
+    if (!confirm('この共有リストを削除しますか？')) return;
+
+    try {
+      const response = await fetch(`/api/shared-lists/${listId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setSharedLists(prev => prev.filter(list => list.id !== listId));
+        toast.success('共有リストを削除しました');
+      } else {
+        toast.error('共有リストの削除に失敗しました');
+      }
+    } catch (error) {
+      console.error('Error deleting shared list:', error);
+      toast.error('共有リストの削除に失敗しました');
+    }
+  };
+
+  const copyShareUrl = async (shareId: string) => {
+    const shareUrl = `${window.location.origin}/lists/share/${shareId}`;
+    await navigator.clipboard.writeText(shareUrl);
+    toast.success('共有URLをコピーしました');
+  };
+
+  // 名前でユーザーを検索
+  const handleSearchUsers = async (query: string) => {
+    setInviteSearchQuery(query);
+    if (query.length < 2) {
+      setInviteSearchResults([]);
+      return;
+    }
+
+    setSearchingUsers(true);
+    try {
+      const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (data.success) {
+        setInviteSearchResults(data.users);
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
+  // ユーザーIDで招待
+  const handleInviteUserById = async (listId: string, userId: string, userName: string) => {
+    setInviting(true);
+    try {
+      const response = await fetch(`/api/shared-lists/${listId}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message);
+        setInviteSearchQuery('');
+        setInviteSearchResults([]);
+        fetchSharedLists();
+      } else {
+        toast.error(data.error || '招待に失敗しました');
+      }
+    } catch (error) {
+      console.error('Error inviting user:', error);
+      toast.error('招待に失敗しました');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  // メールアドレスでユーザーを招待
+  const handleInviteUser = async (listId: string, email: string) => {
+    if (!email.trim()) {
+      toast.error('メールアドレスを入力してください');
+      return;
+    }
+
+    setInviting(true);
+    try {
+      const response = await fetch(`/api/shared-lists/${listId}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: email.trim() })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message);
+        setInviteEmail('');
+        // 共有リストを更新して招待済みユーザーを反映
+        fetchSharedLists();
+      } else {
+        toast.error(data.error || '招待に失敗しました');
+      }
+    } catch (error) {
+      console.error('Error inviting user:', error);
+      toast.error('招待に失敗しました');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  // 招待を取り消し
+  const handleRemoveInvite = async (listId: string, userId: string) => {
+    try {
+      const response = await fetch(`/api/shared-lists/${listId}/invite?userId=${userId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        toast.success('招待を取り消しました');
+        fetchSharedLists();
+      } else {
+        toast.error('招待の取り消しに失敗しました');
+      }
+    } catch (error) {
+      console.error('Error removing invite:', error);
+      toast.error('招待の取り消しに失敗しました');
+    }
+  };
+
+  // 検索履歴をマイリストに保存
+  const handleSaveSearchHistory = async (historyItem: SearchHistoryItem, tags: string[] = []) => {
+    setSavingHistoryId(historyItem.id);
+    try {
+      // 既に保存済みかチェック
+      const existingItem = savedItems.find(
+        item => item.itemType === 'search_result' && item.itemData.name === historyItem.query
+      );
+
+      if (existingItem) {
+        toast.error('この検索結果は既に保存済みです');
+        setSavingHistoryId(null);
+        return;
+      }
+
+      // 企業/サービスの場合は概要を取得
+      let description = `${getModeLabel(historyItem.mode)}で検索`;
+      let slug = historyItem.query.toLowerCase().replace(/\s+/g, '-');
+
+      if (historyItem.mode === 'company' || historyItem.mode === 'service') {
+        try {
+          // 検索クエリ（企業名）をそのままAPIに渡す（APIはname/slugどちらでも検索可能）
+          const searchName = encodeURIComponent(historyItem.query.trim());
+          const endpoint = historyItem.mode === 'company'
+            ? `/api/companies/${searchName}`
+            : `/api/companies/${searchName}`; // サービスもcompanies APIで検索
+
+          const detailRes = await fetch(endpoint, { credentials: 'include' });
+          if (detailRes.ok) {
+            const detailData = await detailRes.json();
+            const entityData = detailData.company || detailData.service || detailData;
+
+            if (entityData?.description) {
+              // 概要セクションを抽出（## 1. 概要 形式の場合）
+              const overviewMatch = entityData.description.match(/##\s*1\.\s*概要\s*\n([\s\S]*?)(?=\n##\s*2\.|$)/i);
+              if (overviewMatch) {
+                description = overviewMatch[1]
+                  .replace(/\*\*(.*?)\*\*/g, '$1')
+                  .replace(/\n+/g, ' ')
+                  .trim()
+                  .substring(0, 500);
+              } else {
+                // 他の形式の場合は最初の意味のある行を取得
+                const lines = entityData.description.split('\n');
+                const meaningfulLines = lines.filter((line: string) => {
+                  const trimmed = line.trim();
+                  return trimmed.length > 20 &&
+                         !trimmed.startsWith('#') &&
+                         !trimmed.startsWith('*') &&
+                         !trimmed.startsWith('-') &&
+                         !trimmed.startsWith('|');
+                });
+                if (meaningfulLines.length > 0) {
+                  description = meaningfulLines.slice(0, 2).join(' ').substring(0, 500);
+                } else {
+                  // 最初の100文字以上の行を探す
+                  const firstSubstantialLine = lines.find((line: string) => line.trim().length > 100);
+                  if (firstSubstantialLine) {
+                    description = firstSubstantialLine.trim().substring(0, 500);
+                  }
+                }
+              }
+            }
+
+            // slugも更新
+            if (entityData?.slug) {
+              slug = entityData.slug;
+            }
+            // 企業名も取得
+            if (entityData?.name) {
+              // itemDataのnameには正式な企業名を使用
+            }
+          }
+        } catch (err) {
+          console.log('Failed to fetch entity details:', err);
+        }
+      }
+
+      const response = await fetch('/api/saved-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          itemType: 'search_result',
+          itemData: {
+            name: historyItem.query,
+            slug: slug,
+            description: description,
+            metadata: {
+              mode: historyItem.mode,
+              results: historyItem.results,
+              originalDate: historyItem.date
+            }
+          },
+          tags: tags.length > 0 ? tags : [],
+          notes: ''
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success('マイリストに保存しました');
+        setSavedItems(prev => [data.savedItem, ...prev]);
+        setHistoryTagInputId(null);
+        setHistoryNewTag('');
+      } else {
+        toast.error(data.error || '保存に失敗しました');
+      }
+    } catch (error) {
+      console.error('Error saving search history:', error);
+      toast.error('保存に失敗しました');
+    } finally {
+      setSavingHistoryId(null);
+    }
+  };
+
+  // 検索履歴が保存済みかチェック
+  const isHistorySaved = (query: string) => {
+    return savedItems.some(
+      item => item.itemType === 'search_result' && item.itemData.name === query
+    );
+  };
+
+  // 検索履歴に対応する保存済みアイテムを取得
+  const getSavedItemForHistory = (query: string): SavedItem | undefined => {
+    return savedItems.find(
+      item => item.itemType === 'search_result' && item.itemData.name === query
+    );
+  };
 
   const fetchSavedItems = async () => {
     try {
@@ -602,15 +950,14 @@ export default function ListsPage() {
   const getItemTypeLabel = (type: string) => {
     switch (type) {
       case 'company':
+      case 'search_result': // 検索結果も企業として表示
         return '企業';
       case 'person':
         return '人物';
       case 'service':
         return 'サービス';
-      case 'search_result':
-        return '検索結果';
       default:
-        return 'その他';
+        return '企業';
     }
   };
 
@@ -648,29 +995,53 @@ export default function ListsPage() {
       </div>
     ) : (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">マイリスト</h1>
-                <p className="text-gray-600 mt-2">
+                <h1 className="text-xl sm:text-3xl font-bold text-gray-900">マイリスト</h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
                   評価した企業・人物と保存したアイテムを管理
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">
-                  {activeTab === 'rated' ? ratedItems.length : activeTab === 'saved' ? savedItems.length : searchHistory.length} 件
+              <div className="flex items-center gap-2 flex-wrap">
+                {activeTab === 'saved' && allTags.length > 0 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowShareModal(true)}
+                      className="gap-1.5 text-xs sm:text-sm"
+                    >
+                      <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">リストを</span>共有
+                    </Button>
+                    {sharedLists.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowSharedListsModal(true)}
+                        className="gap-1.5 text-xs sm:text-sm"
+                      >
+                        <Link2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        共有中 ({sharedLists.length})
+                      </Button>
+                    )}
+                  </>
+                )}
+                <Badge variant="outline" className="text-xs">
+                  {activeTab === 'rated' ? ratedItems.length : activeTab === 'saved' ? savedItems.length : activeTab === 'shared' ? sharedLists.length : searchHistory.length} 件
                 </Badge>
               </div>
             </div>
 
             {/* タブ */}
-            <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+            <div className="flex gap-1 mb-4 sm:mb-6 bg-gray-100 p-1 rounded-lg overflow-x-auto">
               <button
                 onClick={() => setActiveTab('saved')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'saved'
                     ? 'bg-white text-bond-pink shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -680,7 +1051,7 @@ export default function ListsPage() {
               </button>
               <button
                 onClick={() => setActiveTab('rated')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'rated'
                     ? 'bg-white text-bond-pink shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -690,7 +1061,7 @@ export default function ListsPage() {
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'history'
                     ? 'bg-white text-bond-pink shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -698,10 +1069,23 @@ export default function ListsPage() {
               >
                 検索履歴 ({searchHistory.length})
               </button>
+              <button
+                onClick={() => setActiveTab('shared')}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'shared'
+                    ? 'bg-white text-bond-pink shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <Share2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  共有中 ({sharedLists.length})
+                </span>
+              </button>
             </div>
 
             {/* Search and Filter */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
@@ -709,15 +1093,16 @@ export default function ListsPage() {
                   placeholder="検索..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               {activeTab !== 'history' && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-1.5 sm:gap-2 flex-wrap">
                   <Button
                     variant={filter === 'all' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setFilter('all')}
+                    className="text-xs sm:text-sm px-2.5 sm:px-3"
                   >
                     すべて
                   </Button>
@@ -725,6 +1110,7 @@ export default function ListsPage() {
                     variant={filter === 'company' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setFilter('company')}
+                    className="text-xs sm:text-sm px-2.5 sm:px-3"
                   >
                     企業
                   </Button>
@@ -732,6 +1118,7 @@ export default function ListsPage() {
                     variant={filter === 'person' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setFilter('person')}
+                    className="text-xs sm:text-sm px-2.5 sm:px-3"
                   >
                     人物
                   </Button>
@@ -739,6 +1126,7 @@ export default function ListsPage() {
                     variant={filter === 'service' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setFilter('service')}
+                    className="text-xs sm:text-sm px-2.5 sm:px-3"
                   >
                     サービス
                   </Button>
@@ -746,6 +1134,7 @@ export default function ListsPage() {
                     variant={filter === 'search_result' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setFilter('search_result')}
+                    className="text-xs sm:text-sm px-2.5 sm:px-3"
                   >
                     検索結果
                   </Button>
@@ -755,13 +1144,13 @@ export default function ListsPage() {
 
             {/* タグフィルター（保存済みタブのみ） */}
             {activeTab === 'saved' && allTags.length > 0 && (
-              <div className="mt-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Tag className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-500">タグ:</span>
+              <div className="mt-3 sm:mt-4">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
+                  <span className="text-xs sm:text-sm text-gray-500">タグ:</span>
                   <button
                     onClick={() => setTagFilter(null)}
-                    className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                    className={`px-2 py-0.5 sm:py-1 text-xs rounded-full transition-colors ${
                       tagFilter === null
                         ? 'bg-bond-pink text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -813,24 +1202,50 @@ export default function ListsPage() {
                 )}
               </div>
             ) : (
-              <div className="space-y-4">
-                {filteredSearchHistory.map((item) => (
+              <div className="space-y-3 sm:space-y-4">
+                {filteredSearchHistory.map((item) => {
+                  const isSaved = isHistorySaved(item.query);
+                  const savedItem = getSavedItemForHistory(item.query);
+                  const savedTags = savedItem?.tags || [];
+                  return (
                   <Card key={item.id} className="hover:shadow-md transition-all duration-300">
-                    <CardContent className="py-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getModeColor(item.mode)}`}>
-                            <Search className="w-5 h-5" />
+                    <CardContent className="py-3 sm:py-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${getModeColor(item.mode)}`}>
+                            <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-gray-900 truncate">
+                            <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
+                              <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
                                 {item.query}
                               </p>
                               <Badge variant="outline" className="text-xs flex-shrink-0">
                                 {getModeLabel(item.mode)}
                               </Badge>
+                              {isSaved && (
+                                <Badge variant="secondary" className="text-xs flex-shrink-0 bg-green-100 text-green-700">
+                                  <Check className="w-3 h-3 mr-1" />
+                                  保存済み
+                                </Badge>
+                              )}
                             </div>
+                            {/* 保存済みアイテムのタグを表示 */}
+                            {savedTags.length > 0 && (
+                              <div className="flex items-center gap-1 flex-wrap mb-1">
+                                <Tag className="w-3 h-3 text-gray-400" />
+                                {savedTags.map(tag => (
+                                  <Badge
+                                    key={tag}
+                                    variant="secondary"
+                                    className="text-xs bg-bond-pink/10 text-bond-pink hover:bg-bond-pink/20 cursor-pointer"
+                                    onClick={() => setTagFilter(tag)}
+                                  >
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
                             <div className="flex items-center gap-3 text-xs text-gray-500">
                               <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
@@ -840,27 +1255,103 @@ export default function ListsPage() {
                                 <span>{item.results}件の結果</span>
                               )}
                             </div>
+
+                            {/* タグ入力エリア（展開時） */}
+                            {historyTagInputId === item.id && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                <p className="text-xs text-gray-600 mb-2">タグを入力して保存（任意）</p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <input
+                                    type="text"
+                                    value={historyNewTag}
+                                    onChange={(e) => setHistoryNewTag(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && historyNewTag.trim()) {
+                                        handleSaveSearchHistory(item, [historyNewTag.trim()]);
+                                      }
+                                    }}
+                                    placeholder="タグを入力..."
+                                    className="flex-1 min-w-[120px] px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-bond-pink"
+                                  />
+                                  {/* 既存タグから選択 */}
+                                  {allTags.length > 0 && (
+                                    <div className="flex gap-1 flex-wrap">
+                                      {allTags.slice(0, 5).map(tag => (
+                                        <button
+                                          key={tag}
+                                          onClick={() => handleSaveSearchHistory(item, [tag])}
+                                          className="px-2 py-0.5 text-xs bg-gray-200 hover:bg-bond-pink hover:text-white rounded-full transition-colors"
+                                        >
+                                          {tag}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleSaveSearchHistory(item, historyNewTag.trim() ? [historyNewTag.trim()] : [])}
+                                    disabled={savingHistoryId === item.id}
+                                    className="bg-bond-pink hover:bg-pink-600"
+                                  >
+                                    {savingHistoryId === item.id ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <BookmarkPlus className="w-3 h-3 mr-1" />
+                                        保存
+                                      </>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setHistoryTagInputId(null);
+                                      setHistoryNewTag('');
+                                    }}
+                                  >
+                                    キャンセル
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <Link
-                          href={
-                            item.mode === 'person'
-                              ? `/person/${encodeURIComponent(item.query)}`
-                              : item.mode === 'company'
-                              ? `/company/${encodeURIComponent(item.query.toLowerCase().replace(/\s+/g, '-'))}`
-                              : item.mode === 'service'
-                              ? `/service/${encodeURIComponent(item.query.toLowerCase().replace(/\s+/g, '-'))}`
-                              : `/search?q=${encodeURIComponent(item.query)}&mode=${item.mode}`
-                          }
-                          className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 ml-4"
-                        >
-                          詳細を見る
-                          <ExternalLink className="w-3 h-3" />
-                        </Link>
+                        <div className="flex items-center gap-2 sm:ml-4 self-end sm:self-auto">
+                          {!isSaved && historyTagInputId !== item.id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setHistoryTagInputId(item.id)}
+                              className="text-gray-500 hover:text-bond-pink"
+                              title="マイリストに保存"
+                            >
+                              <BookmarkPlus className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Link
+                            href={
+                              item.mode === 'person'
+                                ? `/person/${encodeURIComponent(item.query)}`
+                                : item.mode === 'company'
+                                ? `/company/${encodeURIComponent(item.query.toLowerCase().replace(/\s+/g, '-'))}`
+                                : item.mode === 'service'
+                                ? `/service/${encodeURIComponent(item.query.toLowerCase().replace(/\s+/g, '-'))}`
+                                : `/search?q=${encodeURIComponent(item.query)}&mode=${item.mode}`
+                            }
+                            className="flex items-center gap-1 text-xs sm:text-sm text-blue-600 hover:text-blue-700"
+                          >
+                            詳細を見る
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )
           ) : activeTab === 'rated' ? (
@@ -888,7 +1379,7 @@ export default function ListsPage() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {filteredRatedItems.map((item) => (
                   <Card key={item.id} className="hover:shadow-lg transition-all duration-300 overflow-hidden">
                     <CardHeader className="pb-3">
@@ -1080,6 +1571,87 @@ export default function ListsPage() {
                 ))}
               </div>
             )
+          ) : activeTab === 'shared' ? (
+            // 共有リスト
+            sharedLists.length === 0 ? (
+              <div className="text-center py-12">
+                <Share2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  共有リストがありません
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  タグで絞り込んだアイテムを共有リストとして公開できます
+                </p>
+                <Button onClick={() => setShowShareModal(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  共有リストを作成
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+                {sharedLists.map((list) => (
+                  <Link key={list.id} href={`/lists/share/${list.shareId}`}>
+                    <Card className="hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer h-full">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-lg truncate flex items-center gap-2">
+                              {list.title}
+                              {list.editPermission === 'anyone' && (
+                                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">Wiki</Badge>
+                              )}
+                            </CardTitle>
+                            {list.description && (
+                              <CardDescription className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                {list.description}
+                              </CardDescription>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 ml-2">
+                            {list.visibility === 'public' && (
+                              <Globe className="w-4 h-4 text-green-600" />
+                            )}
+                            {list.visibility === 'link_only' && (
+                              <Link2 className="w-4 h-4 text-blue-600" />
+                            )}
+                            {list.visibility === 'invited_only' && (
+                              <Lock className="w-4 h-4 text-orange-600" />
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {list.tags?.slice(0, 3).map((tag: string) => (
+                            <Badge key={tag} variant="secondary" className="text-xs bg-pink-50 text-pink-600">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {list.tags?.length > 3 && (
+                            <Badge variant="outline" className="text-xs">+{list.tags.length - 3}</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1">
+                              <Eye className="w-3 h-3" />
+                              {list.viewCount || 0}
+                            </span>
+                            {list.sharedWith?.length > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {list.sharedWith.length}
+                              </span>
+                            )}
+                          </div>
+                          <span>{new Date(list.createdAt).toLocaleDateString('ja-JP')}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )
           ) : (
             // 保存済みリスト
             filteredSavedItems.length === 0 ? (
@@ -1105,7 +1677,7 @@ export default function ListsPage() {
                 )}
               </div>
             ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {filteredSavedItems.map((item) => (
                 <Card key={item.id} className="hover:shadow-lg transition-all duration-300 overflow-hidden">
                   <CardHeader className="pb-3">
@@ -1323,6 +1895,417 @@ export default function ListsPage() {
         </div>
       </div>
     </div>
+    )}
+
+    {/* 共有モーダル */}
+    {showShareModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+        <div className="bg-white rounded-t-xl sm:rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">リストを共有</h2>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* タイトル */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  共有リストのタイトル <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={shareTitle}
+                  onChange={(e) => setShareTitle(e.target.value)}
+                  placeholder="例: 注目のスタートアップ"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-bond-pink"
+                />
+              </div>
+
+              {/* 説明 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  説明（任意）
+                </label>
+                <textarea
+                  value={shareDescription}
+                  onChange={(e) => setShareDescription(e.target.value)}
+                  placeholder="このリストについての説明..."
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-bond-pink resize-none"
+                />
+              </div>
+
+              {/* タグ選択 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  共有するタグを選択 <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg max-h-40 overflow-y-auto">
+                  {allTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => {
+                        if (selectedShareTags.includes(tag)) {
+                          setSelectedShareTags(prev => prev.filter(t => t !== tag));
+                        } else {
+                          setSelectedShareTags(prev => [...prev, tag]);
+                        }
+                      }}
+                      className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                        selectedShareTags.includes(tag)
+                          ? 'bg-bond-pink text-white'
+                          : 'bg-white text-gray-700 border hover:border-bond-pink'
+                      }`}
+                    >
+                      <Tag className="w-3 h-3 inline-block mr-1" />
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                {selectedShareTags.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedShareTags.length}個のタグを選択中
+                    （{savedItems.filter(item => (item.tags || []).some(t => selectedShareTags.includes(t))).length}件のアイテム）
+                  </p>
+                )}
+              </div>
+
+              {/* 公開設定 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  公開設定
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                    <input
+                      type="radio"
+                      checked={shareIsPublic}
+                      onChange={() => setShareIsPublic(true)}
+                      className="w-4 h-4 text-bond-pink focus:ring-bond-pink"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-gray-900">公開</p>
+                        <p className="text-xs text-gray-500">URLを知っている人は誰でも閲覧可能</p>
+                      </div>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                    <input
+                      type="radio"
+                      checked={!shareIsPublic}
+                      onChange={() => setShareIsPublic(false)}
+                      className="w-4 h-4 text-bond-pink focus:ring-bond-pink"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-orange-600" />
+                      <div>
+                        <p className="font-medium text-gray-900">限定公開</p>
+                        <p className="text-xs text-gray-500">指定したユーザーのみ閲覧可能</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* アクション */}
+            <div className="flex flex-col-reverse sm:flex-row items-center gap-2 sm:gap-3 mt-4 sm:mt-6 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowShareModal(false)}
+                className="w-full sm:w-auto"
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleCreateSharedList}
+                disabled={creatingShare || !shareTitle.trim() || selectedShareTags.length === 0}
+                className="w-full sm:w-auto sm:flex-1 bg-bond-pink hover:bg-pink-600"
+              >
+                {creatingShare ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    作成中...
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    共有リストを作成
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* 共有リスト一覧モーダル */}
+    {showSharedListsModal && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-2xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden shadow-2xl">
+          {/* ヘッダー */}
+          <div className="bg-gradient-to-r from-bond-pink to-pink-400 px-4 sm:px-6 py-4 sm:py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg sm:rounded-xl backdrop-blur-sm">
+                  <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-white">共有中のリスト</h2>
+                  <p className="text-white/80 text-xs sm:text-sm">{sharedLists.length}件のリスト</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSharedListsModal(false)}
+                className="p-1.5 sm:p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg sm:rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* コンテンツ */}
+          <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-180px)] sm:max-h-[calc(85vh-180px)]">
+            {sharedLists.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-gradient-to-br from-pink-100 to-pink-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Share2 className="w-10 h-10 text-pink-300" />
+                </div>
+                <p className="text-gray-600 font-medium">まだ共有リストがありません</p>
+                <p className="text-gray-400 text-sm mt-1">タグを選択してリストを共有しましょう</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {sharedLists.map(list => (
+                  <div
+                    key={list.id}
+                    className="group bg-gradient-to-br from-white to-gray-50 border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className="p-3 sm:p-5">
+                      <div className="flex items-start gap-2 sm:gap-4">
+                        {/* アイコン */}
+                        <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center ${
+                          list.isPublic
+                            ? 'bg-gradient-to-br from-green-100 to-emerald-50'
+                            : 'bg-gradient-to-br from-amber-100 to-yellow-50'
+                        }`}>
+                          {list.isPublic ? (
+                            <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
+                          ) : (
+                            <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
+                          )}
+                        </div>
+
+                        {/* メインコンテンツ */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 sm:gap-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate group-hover:text-bond-pink transition-colors">
+                                {list.title}
+                              </h3>
+                              {list.description && (
+                                <p className="text-gray-500 text-xs sm:text-sm mt-1 line-clamp-2">{list.description}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* タグ */}
+                          <div className="flex items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3 flex-wrap">
+                            {list.tags.slice(0, 3).map((tag: string) => (
+                              <span
+                                key={tag}
+                                className="px-2 sm:px-3 py-0.5 sm:py-1 bg-gradient-to-r from-pink-50 to-pink-100 text-pink-600 text-xs font-medium rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {list.tags.length > 3 && (
+                              <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">
+                                +{list.tags.length - 3}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* ステータス */}
+                          <div className="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-3 flex-wrap">
+                            <span className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs font-medium px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full ${
+                              list.isPublic
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {list.isPublic ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                              {list.isPublic ? '公開中' : '限定公開'}
+                            </span>
+                            {list.sharedWith?.length > 0 && (
+                              <span className="inline-flex items-center gap-1 sm:gap-1.5 text-xs font-medium text-blue-600 bg-blue-50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full">
+                                <Users className="w-3 h-3" />
+                                {list.sharedWith.length}人
+                              </span>
+                            )}
+                            <span className="inline-flex items-center gap-1 sm:gap-1.5 text-xs text-gray-500">
+                              <Eye className="w-3 h-3" />
+                              {list.viewCount}回
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* アクションボタン */}
+                      <div className="flex items-center justify-end gap-1 sm:gap-2 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 flex-wrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setInviteListId(inviteListId === list.id ? null : list.id)}
+                          className={`gap-1 sm:gap-2 rounded-lg sm:rounded-xl transition-all text-xs sm:text-sm px-2 sm:px-3 ${
+                            inviteListId === list.id
+                              ? 'bg-bond-pink text-white hover:bg-pink-600'
+                              : 'text-gray-600 hover:text-bond-pink hover:bg-pink-50'
+                          }`}
+                        >
+                          <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          招待
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyShareUrl(list.shareId)}
+                          className="gap-1 sm:gap-2 text-gray-600 hover:text-bond-pink hover:bg-pink-50 rounded-lg sm:rounded-xl text-xs sm:text-sm px-2 sm:px-3"
+                        >
+                          <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <span className="hidden sm:inline">URLを</span>コピー
+                        </Button>
+                        <Link href={`/lists/share/${list.shareId}`} target="_blank">
+                          <Button variant="ghost" size="sm" className="gap-1 sm:gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg sm:rounded-xl text-xs sm:text-sm px-2 sm:px-3">
+                            <ExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            開く
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSharedList(list.id)}
+                          className="text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg sm:rounded-xl px-2 sm:px-3"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* 招待パネル（展開時） */}
+                    {inviteListId === list.id && (
+                      <div className="border-t border-gray-100 bg-gradient-to-br from-pink-50/50 to-white p-3 sm:p-5">
+                        <div className="mb-4">
+                          <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-bond-pink" />
+                            <p className="text-xs sm:text-sm font-semibold text-gray-800">メールアドレスで招待</p>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                            <div className="flex-1 relative">
+                              <input
+                                type="email"
+                                value={inviteEmail}
+                                onChange={(e) => setInviteEmail(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && inviteEmail.trim()) {
+                                    handleInviteUser(list.id, inviteEmail);
+                                  }
+                                }}
+                                placeholder="user@example.com"
+                                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-white border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-bond-pink/30 focus:border-bond-pink transition-all shadow-sm"
+                              />
+                            </div>
+                            <Button
+                              onClick={() => handleInviteUser(list.id, inviteEmail)}
+                              disabled={inviting || !inviteEmail.trim()}
+                              className="bg-gradient-to-r from-bond-pink to-pink-500 hover:from-pink-600 hover:to-pink-600 text-white px-4 sm:px-6 py-2.5 rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all"
+                            >
+                              {inviting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <span className="flex items-center gap-2">
+                                  <UserPlus className="w-4 h-4" />
+                                  招待
+                                </span>
+                              )}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2 ml-1">
+                            Bondに登録済みのユーザーのみ招待できます
+                          </p>
+                        </div>
+
+                        {/* 招待済みユーザー一覧 */}
+                        {list.sharedWith?.length > 0 && (
+                          <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+                            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500" />
+                              <p className="text-xs sm:text-sm font-semibold text-gray-800">招待済みユーザー</p>
+                              <span className="text-xs text-gray-400">({list.sharedWith.length}人)</span>
+                            </div>
+                            <div className="grid gap-2">
+                              {list.sharedWith.map((user: any) => (
+                                <div
+                                  key={user.id}
+                                  className="flex items-center justify-between bg-white p-2 sm:p-3 rounded-lg sm:rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all"
+                                >
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                    {user.image ? (
+                                      <img src={user.image} alt={user.name} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full ring-2 ring-gray-100 flex-shrink-0" />
+                                    ) : (
+                                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0">
+                                        <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                                      </div>
+                                    )}
+                                    <div className="min-w-0">
+                                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{user.name || '名前未設定'}</p>
+                                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveInvite(list.id, user.id)}
+                                    className="text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0 p-1.5 sm:p-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* フッター */}
+          <div className="p-3 sm:p-4 border-t border-gray-100 bg-gray-50/50">
+            <Button
+              onClick={() => {
+                setShowSharedListsModal(false);
+                setShowShareModal(true);
+              }}
+              className="w-full bg-gradient-to-r from-bond-pink to-pink-500 hover:from-pink-600 hover:to-pink-600 text-white py-2.5 sm:py-3 rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all font-medium text-sm sm:text-base"
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              新しい共有リストを作成
+            </Button>
+          </div>
+        </div>
+      </div>
     )}
     </LockedFeature>
   );

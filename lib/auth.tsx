@@ -151,24 +151,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       console.log('🔍 [AuthProvider] Starting logout...');
 
-      // NextAuthのsignOutを呼ぶ（NextAuthセッションをクリア）
-      const { signOut } = await import('next-auth/react');
-      await signOut({ redirect: false });
-      console.log('✅ [AuthProvider] NextAuth session cleared');
+      // まずユーザー状態をクリア
+      setUser(null);
 
-      // カスタムセッションもクリア
+      // カスタムセッションをクリア
       await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });
       console.log('✅ [AuthProvider] Custom session cleared');
 
+      // NextAuthのsignOutを呼ぶ（NextAuthセッションをクリア）
+      // signOutでリダイレクトさせる
+      const { signOut } = await import('next-auth/react');
+      await signOut({ callbackUrl: '/', redirect: true });
+      console.log('✅ [AuthProvider] NextAuth session cleared');
+
     } catch (error) {
       console.error('❌ [AuthProvider] Logout error:', error);
-    } finally {
-      setUser(null);
-      console.log('✅ [AuthProvider] User state cleared, redirecting to home...');
-      // Redirect to home page after logout
+      // エラーが発生してもホームにリダイレクト
       window.location.href = '/';
     }
   };

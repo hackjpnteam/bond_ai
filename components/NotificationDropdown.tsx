@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Check, X, Clock, User } from 'lucide-react'
+import { Check, X, Clock, User, ListPlus, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth'
 import Link from 'next/link'
@@ -17,6 +17,15 @@ interface Notification {
     connectionRequestId?: string
     requesterId?: string
     requesterName?: string
+  }
+  data?: {
+    sharedListId?: string
+    shareId?: string
+    listTitle?: string
+    invitedBy?: {
+      id: string
+      name: string
+    }
   }
 }
 
@@ -143,13 +152,21 @@ export function NotificationDropdown({ onClose, onNotificationUpdate }: Notifica
           </div>
         ) : (
           notifications.map((notification) => (
-            <div 
+            <div
               key={notification._id}
               className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''}`}
             >
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-blue-600" />
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  notification.type === 'shared_list_invite'
+                    ? 'bg-pink-100'
+                    : 'bg-blue-100'
+                }`}>
+                  {notification.type === 'shared_list_invite' ? (
+                    <ListPlus className="w-4 h-4 text-pink-600" />
+                  ) : (
+                    <User className="w-4 h-4 text-blue-600" />
+                  )}
                 </div>
                 
                 <div className="flex-1 min-w-0">
@@ -164,8 +181,8 @@ export function NotificationDropdown({ onClose, onNotificationUpdate }: Notifica
                     <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => handleConnectionRequest(
-                          notification._id, 
-                          notification.metadata!.connectionRequestId!, 
+                          notification._id,
+                          notification.metadata!.connectionRequestId!,
                           'accept'
                         )}
                         disabled={processingId === notification._id}
@@ -176,8 +193,8 @@ export function NotificationDropdown({ onClose, onNotificationUpdate }: Notifica
                       </button>
                       <button
                         onClick={() => handleConnectionRequest(
-                          notification._id, 
-                          notification.metadata!.connectionRequestId!, 
+                          notification._id,
+                          notification.metadata!.connectionRequestId!,
                           'reject'
                         )}
                         disabled={processingId === notification._id}
@@ -186,6 +203,22 @@ export function NotificationDropdown({ onClose, onNotificationUpdate }: Notifica
                         <X className="w-3 h-3" />
                         拒否
                       </button>
+                    </div>
+                  )}
+
+                  {notification.type === 'shared_list_invite' && notification.data?.shareId && (
+                    <div className="mt-3">
+                      <Link
+                        href={`/lists/share/${notification.data.shareId}`}
+                        onClick={() => {
+                          markAsRead(notification._id)
+                          onClose()
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-bond-pink to-pink-500 text-white text-xs rounded-lg hover:from-pink-600 hover:to-pink-600 transition-all"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        リストを見る
+                      </Link>
                     </div>
                   )}
                   

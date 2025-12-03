@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose'
 
 export interface INotification extends Document {
   recipient: mongoose.Types.ObjectId
-  type: 'connection_request' | 'connection_accepted' | 'evaluation' | 'message' | 'system'
+  type: 'connection_request' | 'connection_accepted' | 'evaluation' | 'message' | 'system' | 'shared_list_invite'
   title: string
   message: string
   data?: any
@@ -20,7 +20,7 @@ const NotificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ['connection_request', 'connection_accepted', 'evaluation', 'message', 'system'],
+      enum: ['connection_request', 'connection_accepted', 'evaluation', 'message', 'system', 'shared_list_invite'],
       required: true
     },
     title: {

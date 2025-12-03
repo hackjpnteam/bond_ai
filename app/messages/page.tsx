@@ -602,7 +602,7 @@ export default function ChatMessagesPage() {
                                   }}
                                 />
                               </div>
-                              <h2 className="font-medium text-gray-900">{otherParticipant.name}</h2>
+                              <h2 className="text-sm font-medium text-gray-900">{otherParticipant.name}</h2>
                             </>
                           ) : null
                         })()}

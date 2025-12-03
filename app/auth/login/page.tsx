@@ -38,7 +38,8 @@ export default function LoginPage() {
     setIsLoading(true);
     setError('');
     try {
-      await signIn('google', { callbackUrl: '/search' });
+      // prompt: 'select_account' で常にアカウント選択画面を表示
+      await signIn('google', { callbackUrl: '/search', prompt: 'select_account' });
     } catch (err) {
       setError('Google sign in failed. Please try again.');
       setIsLoading(false);

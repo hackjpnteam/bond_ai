@@ -277,8 +277,8 @@ export async function GET(request: NextRequest) {
       const data = companyData[slug] || companyData[name] || companyData[slug?.toLowerCase()] || companyData[name?.toLowerCase()] || {};
       const logoUrl = item.itemData.logoUrl || item.itemData.metadata?.logo || data.logo;
       const founded = item.itemData.founded || item.itemData.metadata?.founded || data.founded;
-      // 最新のdescriptionを優先（Companyモデルから）、なければ保存されたdescriptionを使用
-      const description = data.description || item.itemData.description || item.itemData.metadata?.description;
+      // ユーザーが編集したdescriptionを優先、なければCompanyモデルから取得
+      const description = item.itemData.description || data.description || item.itemData.metadata?.description;
       // 評価データを取得（slug、小文字slug、nameのいずれかでマッチ）
       const evaluations = evaluationsData[slug] || evaluationsData[slug?.toLowerCase()] || evaluationsData[name] || evaluationsData[name?.toLowerCase()] || [];
 

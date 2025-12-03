@@ -2,39 +2,84 @@ import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 import connectDB from '@/lib/mongodb';
 import SharedList from '@/models/SharedList';
+import SharedListView from '@/models/SharedListView';
 import SavedItem from '@/models/SavedItem';
 import User from '@/models/User';
 
-// GET /api/shared-lists - 自分の共有リスト一覧を取得
+// GET /api/shared-lists - 自分の共有リスト一覧を取得（作成したもの + 閲覧したもの）
 export const GET = requireAuth(async (request: NextRequest, user) => {
   try {
     await connectDB();
 
-    const sharedLists = await SharedList.find({ ownerId: user.id })
+    // 自分が作成した共有リスト
+    const ownedLists = await SharedList.find({ ownerId: user.id })
       .sort({ createdAt: -1 })
       .populate('sharedWith', 'name email image')
+      .populate('ownerId', 'name image')
       .lean();
+
+    // 自分が閲覧した共有リスト（自分が作成したものは除く）
+    const viewedListRecords = await SharedListView.find({ userId: user.id })
+      .sort({ viewedAt: -1 })
+      .lean();
+
+    const viewedListIds = viewedListRecords.map(v => v.sharedListId);
+    const viewedLists = await SharedList.find({
+      _id: { $in: viewedListIds },
+      ownerId: { $ne: user.id } // 自分が作成したものは除外
+    })
+      .populate('sharedWith', 'name email image')
+      .populate('ownerId', 'name image')
+      .lean();
+
+    // viewedAtの順番を保持するためのマップ
+    const viewedAtMap = new Map(
+      viewedListRecords.map(v => [v.sharedListId.toString(), v.viewedAt])
+    );
+
+    // 閲覧リストをviewedAt順にソート
+    viewedLists.sort((a, b) => {
+      const aTime = viewedAtMap.get(a._id.toString())?.getTime() || 0;
+      const bTime = viewedAtMap.get(b._id.toString())?.getTime() || 0;
+      return bTime - aTime;
+    });
+
+    const formatList = (list: any, isOwned: boolean, viewedAt?: Date) => ({
+      id: list._id.toString(),
+      shareId: list.shareId,
+      title: list.title,
+      description: list.description,
+      tags: list.tags,
+      isPublic: list.isPublic,
+      visibility: list.visibility || (list.isPublic ? 'public' : 'invited_only'),
+      isOwned,
+      owner: list.ownerId ? {
+        id: list.ownerId._id?.toString() || list.ownerId.toString(),
+        name: list.ownerId.name || 'Unknown',
+        image: list.ownerId.image
+      } : null,
+      sharedWith: (list.sharedWith || []).map((u: any) => ({
+        id: u._id.toString(),
+        name: u.name,
+        email: u.email,
+        image: u.image
+      })),
+      viewCount: list.viewCount,
+      viewedAt: viewedAt,
+      createdAt: list.createdAt,
+      updatedAt: list.updatedAt
+    });
+
+    const formattedOwnedLists = ownedLists.map(list => formatList(list, true));
+    const formattedViewedLists = viewedLists.map(list =>
+      formatList(list, false, viewedAtMap.get(list._id.toString()))
+    );
 
     return new Response(
       JSON.stringify({
         success: true,
-        sharedLists: sharedLists.map(list => ({
-          id: list._id.toString(),
-          shareId: list.shareId,
-          title: list.title,
-          description: list.description,
-          tags: list.tags,
-          isPublic: list.isPublic,
-          sharedWith: list.sharedWith.map((u: any) => ({
-            id: u._id.toString(),
-            name: u.name,
-            email: u.email,
-            image: u.image
-          })),
-          viewCount: list.viewCount,
-          createdAt: list.createdAt,
-          updatedAt: list.updatedAt
-        }))
+        sharedLists: formattedOwnedLists,
+        viewedLists: formattedViewedLists
       }),
       {
         status: 200,

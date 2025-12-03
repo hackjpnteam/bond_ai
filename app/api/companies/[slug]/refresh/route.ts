@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateSession } from '@/lib/auth-middleware';
 import connectDB from '@/lib/mongodb';
 import Company from '@/models/Company';
+import OpenAI from 'openai';
 
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // POST /api/companies/[slug]/refresh - 企業情報を再検索して更新
 export async function POST(
@@ -44,10 +47,10 @@ export async function POST(
 
     const companyName = company.name;
 
-    // Perplexity APIで企業情報を再検索
-    if (!PERPLEXITY_API_KEY) {
+    // OpenAI APIキーチェック
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'Perplexity API キーが設定されていません' },
+        { error: 'OpenAI API キーが設定されていません' },
         { status: 500 }
       );
     }
@@ -75,34 +78,17 @@ export async function POST(
 
 情報が見つからない場合は「情報なし」と記載してください。`;
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'sonar',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `「${companyName}」について詳しく教えてください。` }
-        ],
-        max_tokens: 2000,
-        temperature: 0.2
-      })
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `「${companyName}」について詳しく教えてください。` }
+      ],
+      max_tokens: 2000,
+      temperature: 0.2
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Perplexity API error:', response.status, errorText);
-      return NextResponse.json(
-        { error: 'AI検索に失敗しました' },
-        { status: 500 }
-      );
-    }
-
-    const data = await response.json();
-    const newDescription = data.choices?.[0]?.message?.content;
+    const newDescription = response.choices?.[0]?.message?.content;
 
     if (!newDescription) {
       return NextResponse.json(

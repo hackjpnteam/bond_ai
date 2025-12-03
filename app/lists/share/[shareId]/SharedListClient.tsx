@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, User, Package, Search, ExternalLink, Calendar, Tag, MessageSquare, Eye, ArrowLeft, Loader2, Edit2, Edit3, Plus, X, Save, Trash2, Globe, Link as LinkIcon, Lock, UserPlus, Users, ArrowUpDown, Star, SortAsc, Hash, ChevronDown, ChevronUp, Heart, ThumbsUp, MessageCircle, Send } from 'lucide-react';
+import { Building2, User, Package, Search, ExternalLink, Calendar, Tag, MessageSquare, Eye, ArrowLeft, Loader2, Edit2, Edit3, Plus, X, Save, Trash2, Globe, Link as LinkIcon, Lock, UserPlus, Users, ArrowUpDown, Star, SortAsc, Hash, ChevronDown, ChevronUp, Heart, ThumbsUp, MessageCircle, Send, MoreVertical, FileText, StickyNote } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
@@ -158,6 +158,9 @@ export default function SharedListClient({ shareId }: Props) {
   const [editingDescriptionId, setEditingDescriptionId] = useState<string | null>(null);
   const [editDescriptionText, setEditDescriptionText] = useState('');
 
+  // 編集メニュー（ドロップダウン）
+  const [openEditMenuId, setOpenEditMenuId] = useState<string | null>(null);
+
   // 招待者管理
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteSearchQuery, setInviteSearchQuery] = useState('');
@@ -201,6 +204,17 @@ export default function SharedListClient({ shareId }: Props) {
     { value: 5, label: '経営者' },
     { value: 6, label: 'その他' }
   ];
+
+  // 編集メニューの外側クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (openEditMenuId && !(e.target as Element).closest('.edit-menu-container')) {
+        setOpenEditMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openEditMenuId]);
 
   const toggleEvaluations = (itemId: string) => {
     setExpandedEvaluations(prev => {
@@ -1712,6 +1726,58 @@ export default function SharedListClient({ shareId }: Props) {
                         <ExternalLink className="h-4 w-4 text-gray-400 hover:text-bond-pink" />
                       </Link>
                     )}
+                    {/* 編集ドロップダウンメニュー */}
+                    {sharedList.canEdit && (
+                      <div className="relative flex-shrink-0 edit-menu-container">
+                        <button
+                          onClick={() => {
+                            if (!requireLoginForEdit()) return;
+                            setOpenEditMenuId(openEditMenuId === `${item.source}-${item.id}` ? null : `${item.source}-${item.id}`);
+                          }}
+                          className="p-1 text-gray-400 hover:text-bond-pink hover:bg-pink-50 rounded transition-all"
+                          title="編集"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {openEditMenuId === `${item.source}-${item.id}` && (
+                          <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                            <button
+                              onClick={() => {
+                                setEditingDescriptionId(`${item.source}-${item.id}`);
+                                setEditDescriptionText(item.itemData.description || '');
+                                setOpenEditMenuId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-bond-pink transition-colors"
+                            >
+                              <FileText className="h-4 w-4" />
+                              概要を編集
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingTagsId(`${item.source}-${item.id}`);
+                                setEditTagsText(item.tags?.join(', ') || '');
+                                setOpenEditMenuId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-bond-pink transition-colors"
+                            >
+                              <Tag className="h-4 w-4" />
+                              タグを編集
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingNoteId(`${item.source}-${item.id}`);
+                                setEditNoteText(item.notes || '');
+                                setOpenEditMenuId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-bond-pink transition-colors"
+                            >
+                              <StickyNote className="h-4 w-4" />
+                              メモを編集
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* メタ情報行: タイプ + スコア */}
@@ -1777,36 +1843,11 @@ export default function SharedListClient({ shareId }: Props) {
                   ) : (
                     <div className="mb-3">
                       {item.itemData.description ? (
-                        <div className="flex items-start gap-2">
-                          <p className="text-sm text-gray-600 leading-relaxed break-words flex-1">
-                            {summarizeDescription(item.itemData.description)}
-                          </p>
-                          {sharedList.canEdit && (
-                            <button
-                              onClick={() => {
-                                if (!requireLoginForEdit()) return;
-                                setEditingDescriptionId(`${item.source}-${item.id}`);
-                                setEditDescriptionText(item.itemData.description || '');
-                              }}
-                              className="flex-shrink-0 p-1 text-gray-400 hover:text-bond-pink hover:bg-pink-50 rounded transition-all"
-                              title="概要を編集"
-                            >
-                              <Edit2 className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      ) : sharedList.canEdit && (
-                        <button
-                          onClick={() => {
-                            if (!requireLoginForEdit()) return;
-                            setEditingDescriptionId(`${item.source}-${item.id}`);
-                            setEditDescriptionText('');
-                          }}
-                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-bond-pink"
-                        >
-                          <Plus className="h-3 w-3" />
-                          概要を追加
-                        </button>
+                        <p className="text-sm text-gray-600 leading-relaxed break-words">
+                          {summarizeDescription(item.itemData.description)}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-400 italic">概要なし</p>
                       )}
                     </div>
                   )}
@@ -1858,18 +1899,6 @@ export default function SharedListClient({ shareId }: Props) {
                       ) : (
                         <span className="text-xs text-gray-400">タグなし</span>
                       )}
-                      {sharedList.canEdit && (
-                        <button
-                          onClick={() => {
-                            if (!requireLoginForEdit()) return;
-                            setEditingTagsId(`${item.source}-${item.id}`);
-                            setEditTagsText(item.tags?.join(', ') || '');
-                          }}
-                          className="p-1 text-gray-400 hover:text-bond-pink hover:bg-pink-50 rounded transition-colors"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </button>
-                      )}
                     </div>
                   )}
 
@@ -1905,39 +1934,15 @@ export default function SharedListClient({ shareId }: Props) {
                         </Button>
                       </div>
                     </div>
-                  ) : item.notes ? (
-                    <div className="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-lg p-2 sm:p-3 mt-2 group relative">
+                  ) : item.notes && (
+                    <div className="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-lg p-2 sm:p-3 mt-2">
                       <div className="flex items-start gap-2">
                         <MessageSquare className="h-4 w-4 text-pink-400 mt-0.5 flex-shrink-0" />
                         <p className="text-sm text-pink-700 whitespace-pre-wrap break-words flex-1 leading-relaxed">
                           {item.notes}
                         </p>
-                        {sharedList.canEdit && (
-                          <button
-                            onClick={() => {
-                              if (!requireLoginForEdit()) return;
-                              setEditingNoteId(`${item.source}-${item.id}`);
-                              setEditNoteText(item.notes || '');
-                            }}
-                            className="p-1 text-pink-300 hover:text-pink-500 hover:bg-pink-100 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </button>
-                        )}
                       </div>
                     </div>
-                  ) : sharedList.canEdit && (
-                    <button
-                      onClick={() => {
-                        if (!requireLoginForEdit()) return;
-                        setEditingNoteId(`${item.source}-${item.id}`);
-                        setEditNoteText('');
-                      }}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-bond-pink mt-2"
-                    >
-                      <Plus className="h-3 w-3" />
-                      メモを追加
-                    </button>
                   )}
 
                   {/* 評価セクション - 評価があるか、ログインユーザーの場合のみ表示 */}

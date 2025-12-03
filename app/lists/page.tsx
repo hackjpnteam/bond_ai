@@ -73,6 +73,7 @@ export default function ListsPage() {
   const [shareIsPublic, setShareIsPublic] = useState(true);
   const [creatingShare, setCreatingShare] = useState(false);
   const [sharedLists, setSharedLists] = useState<any[]>([]);
+  const [viewedLists, setViewedLists] = useState<any[]>([]);
   const [showSharedListsModal, setShowSharedListsModal] = useState(false);
   // 招待機能
   const [inviteListId, setInviteListId] = useState<string | null>(null);
@@ -104,6 +105,7 @@ export default function ListsPage() {
         const data = await response.json();
         if (data.success) {
           setSharedLists(data.sharedLists);
+          setViewedLists(data.viewedLists || []);
         }
       }
     } catch (error) {
@@ -1032,7 +1034,7 @@ export default function ListsPage() {
                   </>
                 )}
                 <Badge variant="outline" className="text-xs">
-                  {activeTab === 'rated' ? ratedItems.length : activeTab === 'saved' ? savedItems.length : activeTab === 'shared' ? sharedLists.length : searchHistory.length} 件
+                  {activeTab === 'rated' ? ratedItems.length : activeTab === 'saved' ? savedItems.length : activeTab === 'shared' ? (sharedLists.length + viewedLists.length) : searchHistory.length} 件
                 </Badge>
               </div>
             </div>
@@ -1079,7 +1081,7 @@ export default function ListsPage() {
               >
                 <span className="flex items-center gap-1">
                   <Share2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  共有中 ({sharedLists.length})
+                  共有中 ({sharedLists.length + viewedLists.length})
                 </span>
               </button>
             </div>
@@ -1573,7 +1575,7 @@ export default function ListsPage() {
             )
           ) : activeTab === 'shared' ? (
             // 共有リスト
-            sharedLists.length === 0 ? (
+            (sharedLists.length === 0 && viewedLists.length === 0) ? (
               <div className="text-center py-12">
                 <Share2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -1588,68 +1590,160 @@ export default function ListsPage() {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-                {sharedLists.map((list) => (
-                  <Link key={list.id} href={`/lists/share/${list.shareId}`}>
-                    <Card className="hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer h-full">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <CardTitle className="text-lg truncate flex items-center gap-2">
-                              {list.title}
-                              {list.editPermission === 'anyone' && (
-                                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">Wiki</Badge>
+              <div className="space-y-6">
+                {/* 自分が作成したリスト */}
+                {sharedLists.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Share2 className="w-4 h-4" />
+                      作成したリスト ({sharedLists.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+                      {sharedLists.map((list) => (
+                        <Link key={list.id} href={`/lists/share/${list.shareId}`}>
+                          <Card className="hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer h-full">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="text-lg truncate flex items-center gap-2">
+                                    {list.title}
+                                    {list.editPermission === 'anyone' && (
+                                      <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">Wiki</Badge>
+                                    )}
+                                  </CardTitle>
+                                  {list.description && (
+                                    <CardDescription className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                      {list.description}
+                                    </CardDescription>
+                                  )}
+                                </div>
+                                <div className="flex-shrink-0 ml-2">
+                                  {list.visibility === 'public' && (
+                                    <Globe className="w-4 h-4 text-green-600" />
+                                  )}
+                                  {list.visibility === 'link_only' && (
+                                    <Link2 className="w-4 h-4 text-blue-600" />
+                                  )}
+                                  {list.visibility === 'invited_only' && (
+                                    <Lock className="w-4 h-4 text-orange-600" />
+                                  )}
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <div className="flex flex-wrap gap-1 mb-3">
+                                {list.tags?.slice(0, 3).map((tag: string) => (
+                                  <Badge key={tag} variant="secondary" className="text-xs bg-pink-50 text-pink-600">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {list.tags?.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">+{list.tags.length - 3}</Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <div className="flex items-center gap-3">
+                                  <span className="flex items-center gap-1">
+                                    <Eye className="w-3 h-3" />
+                                    {list.viewCount || 0}
+                                  </span>
+                                  {list.sharedWith?.length > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Users className="w-3 h-3" />
+                                      {list.sharedWith.length}
+                                    </span>
+                                  )}
+                                </div>
+                                <span>{new Date(list.createdAt).toLocaleDateString('ja-JP')}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 閲覧したリスト */}
+                {viewedLists.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Eye className="w-4 h-4" />
+                      閲覧したリスト ({viewedLists.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+                      {viewedLists.map((list) => (
+                        <Link key={list.id} href={`/lists/share/${list.shareId}`}>
+                          <Card className="hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer h-full border-blue-100">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="text-lg truncate flex items-center gap-2">
+                                    {list.title}
+                                    {list.editPermission === 'anyone' && (
+                                      <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">Wiki</Badge>
+                                    )}
+                                  </CardTitle>
+                                  {list.description && (
+                                    <CardDescription className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                      {list.description}
+                                    </CardDescription>
+                                  )}
+                                </div>
+                                <div className="flex-shrink-0 ml-2">
+                                  {list.visibility === 'public' && (
+                                    <Globe className="w-4 h-4 text-green-600" />
+                                  )}
+                                  {list.visibility === 'link_only' && (
+                                    <Link2 className="w-4 h-4 text-blue-600" />
+                                  )}
+                                  {list.visibility === 'invited_only' && (
+                                    <Lock className="w-4 h-4 text-orange-600" />
+                                  )}
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              {/* オーナー情報 */}
+                              {list.owner && (
+                                <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
+                                  {list.owner.image ? (
+                                    <img src={list.owner.image} alt={list.owner.name} className="w-4 h-4 rounded-full" />
+                                  ) : (
+                                    <User className="w-4 h-4" />
+                                  )}
+                                  <span>{list.owner.name}</span>
+                                </div>
                               )}
-                            </CardTitle>
-                            {list.description && (
-                              <CardDescription className="text-sm text-gray-500 mt-1 line-clamp-2">
-                                {list.description}
-                              </CardDescription>
-                            )}
-                          </div>
-                          <div className="flex-shrink-0 ml-2">
-                            {list.visibility === 'public' && (
-                              <Globe className="w-4 h-4 text-green-600" />
-                            )}
-                            {list.visibility === 'link_only' && (
-                              <Link2 className="w-4 h-4 text-blue-600" />
-                            )}
-                            {list.visibility === 'invited_only' && (
-                              <Lock className="w-4 h-4 text-orange-600" />
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {list.tags?.slice(0, 3).map((tag: string) => (
-                            <Badge key={tag} variant="secondary" className="text-xs bg-pink-50 text-pink-600">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {list.tags?.length > 3 && (
-                            <Badge variant="outline" className="text-xs">+{list.tags.length - 3}</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <div className="flex items-center gap-3">
-                            <span className="flex items-center gap-1">
-                              <Eye className="w-3 h-3" />
-                              {list.viewCount || 0}
-                            </span>
-                            {list.sharedWith?.length > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                {list.sharedWith.length}
-                              </span>
-                            )}
-                          </div>
-                          <span>{new Date(list.createdAt).toLocaleDateString('ja-JP')}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+                              <div className="flex flex-wrap gap-1 mb-3">
+                                {list.tags?.slice(0, 3).map((tag: string) => (
+                                  <Badge key={tag} variant="secondary" className="text-xs bg-pink-50 text-pink-600">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {list.tags?.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">+{list.tags.length - 3}</Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <div className="flex items-center gap-3">
+                                  <span className="flex items-center gap-1">
+                                    <Eye className="w-3 h-3" />
+                                    {list.viewCount || 0}
+                                  </span>
+                                </div>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {list.viewedAt ? new Date(list.viewedAt).toLocaleDateString('ja-JP') : ''}
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           ) : (

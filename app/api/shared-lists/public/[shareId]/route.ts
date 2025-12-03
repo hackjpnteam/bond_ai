@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb';
 import SharedList from '@/models/SharedList';
 import SavedItem from '@/models/SavedItem';
 import SharedListItem from '@/models/SharedListItem';
+import SharedListView from '@/models/SharedListView';
 import User from '@/models/User';
 import Notification from '@/models/Notification';
 import Evaluation from '@/models/Evaluation';
@@ -140,6 +141,15 @@ export async function GET(request: NextRequest) {
       SharedList.updateOne(
         { _id: sharedList._id },
         { $inc: { viewCount: 1 } }
+      ).exec();
+    }
+
+    // ログインユーザーの閲覧履歴を記録（オーナー以外）
+    if (authUser?.id && !isOwner) {
+      SharedListView.findOneAndUpdate(
+        { userId: authUser.id, sharedListId: sharedList._id },
+        { viewedAt: new Date() },
+        { upsert: true, new: true }
       ).exec();
     }
 

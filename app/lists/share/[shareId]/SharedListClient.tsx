@@ -1304,6 +1304,10 @@ export default function SharedListClient({ shareId }: Props) {
     let cleanText = text
       // ```json { "answer": "..." } ``` 形式を処理
       .replace(/^```json\s*\{[\s\S]*?"answer"\s*:\s*"([\s\S]*?)"\s*\}[\s\S]*?```$/gm, '$1')
+      // { "answer": "..." } 形式を処理（```jsonなし）
+      .replace(/^\s*\{\s*"answer"\s*:\s*"([\s\S]*?)"\s*\}\s*$/gm, '$1')
+      // "answer": "..." で始まる形式を処理
+      .replace(/^"answer"\s*:\s*"([\s\S]*)$/gm, '$1')
       // ```json ... ``` を除去
       .replace(/```json[\s\S]*?```/g, '')
       .replace(/```[\s\S]*?```/g, '');

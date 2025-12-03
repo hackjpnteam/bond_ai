@@ -1,5 +1,6 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
@@ -15,6 +16,8 @@ import bcrypt from 'bcryptjs';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || '';
+const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || '';
 
 console.log('🔍 NextAuth Environment Check:');
 console.log('  GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID);
@@ -41,6 +44,10 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
+    }),
+    GitHubProvider({
+      clientId: GITHUB_CLIENT_ID,
+      clientSecret: GITHUB_CLIENT_SECRET,
     }),
     CredentialsProvider({
       name: 'credentials',
@@ -84,7 +91,7 @@ export const authOptions: NextAuthOptions = {
       console.log('🔍 [NextAuth signIn] Provider:', account?.provider);
       console.log('🔍 [NextAuth signIn] User:', user.email);
 
-      if (account?.provider === 'google') {
+      if (account?.provider === 'google' || account?.provider === 'github') {
         try {
           await connectDB();
 
@@ -92,32 +99,32 @@ export const authOptions: NextAuthOptions = {
           let existingUser = await User.findOne({ email: user.email });
 
           if (!existingUser) {
-            console.log('⚠️ [NextAuth signIn] User not found, creating new user...');
+            console.log(`⚠️ [NextAuth signIn] User not found, creating new user via ${account.provider}...`);
             // Create new user
             existingUser = await User.create({
               email: user.email,
               name: user.name,
               image: user.image,
-              verified: true, // Google users are auto-verified
-              provider: 'google',
+              verified: true, // OAuth users are auto-verified
+              provider: account.provider,
               providerId: account.providerAccountId
             });
             console.log('✅ [NextAuth signIn] New user created:', existingUser.email);
           } else {
             console.log('✅ [NextAuth signIn] Existing user found:', existingUser.email);
-            // Update user with Google info if needed
+            // Update user with OAuth info if needed
             if (!existingUser.provider) {
-              existingUser.provider = 'google';
+              existingUser.provider = account.provider;
               existingUser.providerId = account.providerAccountId;
               existingUser.verified = true;
               await existingUser.save();
-              console.log('✅ [NextAuth signIn] User updated with Google info');
+              console.log(`✅ [NextAuth signIn] User updated with ${account.provider} info`);
             }
           }
 
           return true;
         } catch (error) {
-          console.error('❌ [NextAuth signIn] Error during Google sign in:', error);
+          console.error(`❌ [NextAuth signIn] Error during ${account?.provider} sign in:`, error);
           return false;
         }
       }

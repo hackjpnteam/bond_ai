@@ -864,20 +864,26 @@ export default function SharedListClient({ shareId }: Props) {
     return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
   };
 
+  // 編集前のログインチェック
+  const requireLoginForEdit = (): boolean => {
+    if (!isLoggedIn) {
+      toast.error('編集するにはログインが必要です');
+      return false;
+    }
+    return true;
+  };
+
   // アイテムのメモを更新
   const handleSaveNotes = async (itemId: string, source: 'saved' | 'shared') => {
     if (!sharedList) return;
 
     try {
       setSavingItemEdit(true);
-      const endpoint = source === 'saved'
-        ? `/api/saved-items/${itemId}`
-        : `/api/shared-lists/${sharedList.id}/items?itemId=${itemId}`;
-
-      const response = await fetch(endpoint, {
-        method: 'PATCH',
+      // 共有リスト経由で更新（Wikiモード対応）
+      const response = await fetch(`/api/shared-lists/public/${shareId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: editNoteText })
+        body: JSON.stringify({ itemId, source, notes: editNoteText })
       });
 
       const data = await response.json();
@@ -915,14 +921,11 @@ export default function SharedListClient({ shareId }: Props) {
       setSavingItemEdit(true);
       const newTags = editTagsText.split(',').map(t => t.trim()).filter(t => t.length > 0);
 
-      const endpoint = source === 'saved'
-        ? `/api/saved-items/${itemId}`
-        : `/api/shared-lists/${sharedList.id}/items?itemId=${itemId}`;
-
-      const response = await fetch(endpoint, {
-        method: 'PATCH',
+      // 共有リスト経由で更新（Wikiモード対応）
+      const response = await fetch(`/api/shared-lists/public/${shareId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tags: newTags })
+        body: JSON.stringify({ itemId, source, tags: newTags })
       });
 
       const data = await response.json();
@@ -959,14 +962,11 @@ export default function SharedListClient({ shareId }: Props) {
     try {
       setSavingItemEdit(true);
 
-      const endpoint = source === 'saved'
-        ? `/api/saved-items/${itemId}`
-        : `/api/shared-lists/${sharedList.id}/items?itemId=${itemId}`;
-
-      const response = await fetch(endpoint, {
-        method: 'PATCH',
+      // 共有リスト経由で更新（Wikiモード対応）
+      const response = await fetch(`/api/shared-lists/public/${shareId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemData: { description: editDescriptionText } })
+        body: JSON.stringify({ itemId, source, description: editDescriptionText })
       });
 
       const data = await response.json();
@@ -1662,7 +1662,10 @@ export default function SharedListClient({ shareId }: Props) {
 
             {sharedList.canEdit && (
               <Button
-                onClick={() => setShowAddModal(true)}
+                onClick={() => {
+                  if (!requireLoginForEdit()) return;
+                  setShowAddModal(true);
+                }}
                 className="bg-bond-pink hover:bg-pink-600"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -1745,8 +1748,8 @@ export default function SharedListClient({ shareId }: Props) {
                       <textarea
                         value={editDescriptionText}
                         onChange={(e) => setEditDescriptionText(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bond-pink/30 focus:border-bond-pink resize-none"
-                        rows={4}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-bond-pink/30 focus:border-bond-pink resize-vertical min-h-[200px]"
+                        rows={12}
                         placeholder="企業・サービスの概要を入力..."
                       />
                       <div className="flex items-center gap-2 mt-2">
@@ -1772,19 +1775,21 @@ export default function SharedListClient({ shareId }: Props) {
                       </div>
                     </div>
                   ) : (
-                    <div className="group mb-3">
+                    <div className="mb-3">
                       {item.itemData.description ? (
-                        <div className="relative">
-                          <p className="text-sm text-gray-600 leading-relaxed break-words w-full">
+                        <div className="flex items-start gap-2">
+                          <p className="text-sm text-gray-600 leading-relaxed break-words flex-1">
                             {summarizeDescription(item.itemData.description)}
                           </p>
                           {sharedList.canEdit && (
                             <button
                               onClick={() => {
+                                if (!requireLoginForEdit()) return;
                                 setEditingDescriptionId(`${item.source}-${item.id}`);
                                 setEditDescriptionText(item.itemData.description || '');
                               }}
-                              className="absolute top-0 right-0 p-1 text-gray-400 hover:text-bond-pink hover:bg-pink-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                              className="flex-shrink-0 p-1 text-gray-400 hover:text-bond-pink hover:bg-pink-50 rounded transition-all"
+                              title="概要を編集"
                             >
                               <Edit2 className="h-3 w-3" />
                             </button>
@@ -1793,6 +1798,7 @@ export default function SharedListClient({ shareId }: Props) {
                       ) : sharedList.canEdit && (
                         <button
                           onClick={() => {
+                            if (!requireLoginForEdit()) return;
                             setEditingDescriptionId(`${item.source}-${item.id}`);
                             setEditDescriptionText('');
                           }}
@@ -1855,6 +1861,7 @@ export default function SharedListClient({ shareId }: Props) {
                       {sharedList.canEdit && (
                         <button
                           onClick={() => {
+                            if (!requireLoginForEdit()) return;
                             setEditingTagsId(`${item.source}-${item.id}`);
                             setEditTagsText(item.tags?.join(', ') || '');
                           }}
@@ -1908,6 +1915,7 @@ export default function SharedListClient({ shareId }: Props) {
                         {sharedList.canEdit && (
                           <button
                             onClick={() => {
+                              if (!requireLoginForEdit()) return;
                               setEditingNoteId(`${item.source}-${item.id}`);
                               setEditNoteText(item.notes || '');
                             }}
@@ -1921,6 +1929,7 @@ export default function SharedListClient({ shareId }: Props) {
                   ) : sharedList.canEdit && (
                     <button
                       onClick={() => {
+                        if (!requireLoginForEdit()) return;
                         setEditingNoteId(`${item.source}-${item.id}`);
                         setEditNoteText('');
                       }}
@@ -2201,7 +2210,10 @@ export default function SharedListClient({ shareId }: Props) {
             <p className="text-gray-600 font-medium">このリストにはまだアイテムがありません</p>
             {sharedList.canEdit && (
               <Button
-                onClick={() => setShowAddModal(true)}
+                onClick={() => {
+                  if (!requireLoginForEdit()) return;
+                  setShowAddModal(true);
+                }}
                 className="mt-4 bg-bond-pink hover:bg-pink-600"
               >
                 <Plus className="h-4 w-4 mr-2" />

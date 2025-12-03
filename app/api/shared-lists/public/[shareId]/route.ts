@@ -591,3 +591,120 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// PUT /api/shared-lists/public/[shareId] - 共有リスト内のアイテムを更新
+export async function PUT(request: NextRequest) {
+  try {
+    await connectDB();
+
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const shareId = pathParts[pathParts.length - 1];
+
+    const sharedList = await SharedList.findOne({ shareId });
+
+    if (!sharedList) {
+      return new Response(
+        JSON.stringify({ error: '共有リストが見つかりません' }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const authUser = await validateSession(request);
+    const canEdit = await checkEditPermission(sharedList, authUser);
+
+    if (!canEdit) {
+      return new Response(
+        JSON.stringify({ error: '編集権限がありません' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const body = await request.json();
+    const { itemId, source, notes, tags, description } = body;
+
+    if (!itemId || !source) {
+      return new Response(
+        JSON.stringify({ error: 'itemIdとsourceは必須です' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // 更新データを準備
+    const updateData: any = {};
+    if (notes !== undefined) updateData.notes = notes;
+    if (tags !== undefined) updateData.tags = tags;
+    if (description !== undefined) updateData['itemData.description'] = description;
+
+    let result;
+    if (source === 'saved') {
+      // SavedItemを更新（タグベースのアイテム）
+      // 共有リストのタグに含まれるアイテムかチェック
+      const SavedItem = (await import('@/models/SavedItem')).default;
+      result = await SavedItem.findOneAndUpdate(
+        {
+          _id: itemId,
+          tags: { $in: sharedList.tags }
+        },
+        { $set: updateData },
+        { new: true }
+      );
+    } else {
+      // SharedListItemを更新（直接追加されたアイテム）
+      result = await SharedListItem.findOneAndUpdate(
+        {
+          _id: itemId,
+          sharedListId: sharedList._id
+        },
+        { $set: updateData },
+        { new: true }
+      );
+    }
+
+    if (!result) {
+      return new Response(
+        JSON.stringify({ error: 'アイテムが見つかりません' }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'アイテムを更新しました',
+        item: {
+          id: result._id.toString(),
+          notes: result.notes,
+          tags: result.tags,
+          itemData: result.itemData
+        }
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+  } catch (error) {
+    console.error('Update item in public shared list error:', error);
+    return new Response(
+      JSON.stringify({ error: 'アイテムの更新に失敗しました' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
+}

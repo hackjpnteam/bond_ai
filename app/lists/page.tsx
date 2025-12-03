@@ -86,6 +86,10 @@ export default function ListsPage() {
   const [savingHistoryId, setSavingHistoryId] = useState<string | null>(null);
   const [historyTagInputId, setHistoryTagInputId] = useState<string | null>(null);
   const [historyNewTag, setHistoryNewTag] = useState('');
+  // 概要編集
+  const [editingDescriptionItemId, setEditingDescriptionItemId] = useState<string | null>(null);
+  const [editingDescription, setEditingDescription] = useState('');
+  const [savingDescription, setSavingDescription] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -438,56 +442,9 @@ export default function ListsPage() {
           setSavedItems(data.savedItems);
           setLoading(false);
 
-          // バックグラウンドで各アイテムの最新データを取得して更新
-          const updateItemsInBackground = async () => {
-            for (const item of data.savedItems) {
-              try {
-                if (item.itemType === 'company' || item.itemType === 'service') {
-                  const slug = item.itemData.slug || item.itemData.name.toLowerCase();
-                  const endpoint = item.itemType === 'company'
-                    ? `/api/companies/${encodeURIComponent(slug)}`
-                    : `/api/services/${encodeURIComponent(slug)}`;
-
-                  const detailRes = await fetch(endpoint, { credentials: 'include' });
-                  if (detailRes.ok) {
-                    const detailData = await detailRes.json();
-                    const entityData = detailData.company || detailData.service || detailData;
-
-                    if (entityData?.description) {
-                      let summaryDescription = '';
-                      const overviewMatch = entityData.description.match(/##\s*1\.\s*概要\s*\n([\s\S]*?)(?=\n##\s*2\.|$)/i);
-                      if (overviewMatch) {
-                        summaryDescription = overviewMatch[1]
-                          .replace(/\*\*(.*?)\*\*/g, '$1')
-                          .replace(/\n+/g, ' ')
-                          .trim()
-                          .substring(0, 500);
-                      } else {
-                        summaryDescription = entityData.description
-                          .split('\n')
-                          .filter((line: string) => line.trim().length > 20 && !line.startsWith('#') && !line.startsWith('*'))
-                          .slice(0, 2)
-                          .join(' ')
-                          .substring(0, 500);
-                      }
-
-                      if (summaryDescription) {
-                        setSavedItems(prev => prev.map(i =>
-                          i.id === item.id
-                            ? { ...i, itemData: { ...i.itemData, description: summaryDescription } }
-                            : i
-                        ));
-                      }
-                    }
-                  }
-                }
-              } catch (err) {
-                console.log(`Failed to fetch latest data for ${item.itemData.name}:`, err);
-              }
-            }
-          };
-
-          updateItemsInBackground();
+          // 注意: バックグラウンド更新は削除
+          // ユーザーが編集したdescriptionを上書きしてしまうため、
+          // 保存されているdescriptionをそのまま使用する
           return;
         }
       } else if (response.status === 401) {
@@ -804,6 +761,45 @@ export default function ListsPage() {
     }
   };
 
+  // 企業概要を更新
+  const handleUpdateDescription = async (itemId: string, description: string) => {
+    setSavingDescription(true);
+    try {
+      const response = await fetch(`/api/saved-items/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          itemData: {
+            description: description.trim()
+          }
+        })
+      });
+
+      if (response.ok) {
+        setSavedItems(prev => prev.map(i =>
+          i.id === itemId ? {
+            ...i,
+            itemData: {
+              ...i.itemData,
+              description: description.trim()
+            }
+          } : i
+        ));
+        setEditingDescriptionItemId(null);
+        setEditingDescription('');
+        toast.success('企業概要を保存しました');
+      } else {
+        throw new Error('企業概要の保存に失敗しました');
+      }
+    } catch (error) {
+      console.error('Error updating description:', error);
+      toast.error('企業概要の保存に失敗しました');
+    } finally {
+      setSavingDescription(false);
+    }
+  };
+
   // 全タグを取得（空文字をフィルタリング）
   const allTags = Array.from(new Set(savedItems.flatMap(item => item.tags || []))).filter(tag => tag && tag.trim());
 
@@ -901,6 +897,25 @@ export default function ListsPage() {
     if (!description) return '';
 
     let text = description;
+
+    // JSON形式のラッパーを処理
+    // ```json { "answer": "..." } ``` 形式
+    const jsonBlockMatch = text.match(/```json\s*\{\s*"answer"\s*:\s*"([\s\S]*?)"\s*\}/);
+    if (jsonBlockMatch) {
+      text = jsonBlockMatch[1];
+    }
+    // { "answer": "..." } 形式
+    const jsonMatch = text.match(/^\s*\{\s*"answer"\s*:\s*"([\s\S]*?)"\s*\}/);
+    if (jsonMatch) {
+      text = jsonMatch[1];
+    }
+    // "answer": "..." 形式
+    const answerMatch = text.match(/^"answer"\s*:\s*"([\s\S]*)$/);
+    if (answerMatch) {
+      text = answerMatch[1].replace(/"$/, '');
+    }
+    // エスケープされた改行を実際の改行に変換
+    text = text.replace(/\\n/g, '\n').replace(/\\r/g, '');
 
     // まず、リテラルな\n（2文字）で次セクションを切り取る
     const literalCutPatterns = [
@@ -1864,11 +1879,83 @@ export default function ListsPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {item.itemData.description && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-4">
-                        {getSummary(item.itemData.description, 300)}
-                      </p>
-                    )}
+                    {/* 企業概要セクション */}
+                    <div className="mb-3">
+                      {editingDescriptionItemId === item.id ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editingDescription}
+                            onChange={(e) => setEditingDescription(e.target.value)}
+                            placeholder="企業概要を入力（300文字以内推奨）..."
+                            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-bond-pink resize-none"
+                            rows={4}
+                            maxLength={500}
+                          />
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-400">
+                              {editingDescription.length}/500文字
+                            </span>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingDescriptionItemId(null);
+                                  setEditingDescription('');
+                                }}
+                                disabled={savingDescription}
+                              >
+                                キャンセル
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdateDescription(item.id, editingDescription)}
+                                disabled={savingDescription}
+                                className="bg-bond-pink hover:bg-bond-pink/90"
+                              >
+                                {savingDescription ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Check className="w-4 h-4" />
+                                )}
+                                保存
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="group">
+                          {item.itemData.description ? (
+                            <div className="flex items-start gap-2">
+                              <p className="text-sm text-gray-600 line-clamp-4 flex-1">
+                                {getSummary(item.itemData.description, 300)}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  setEditingDescriptionItemId(item.id);
+                                  setEditingDescription(item.itemData.description || '');
+                                }}
+                                className="p-1 text-gray-400 hover:text-bond-pink hover:bg-pink-50 rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                title="企業概要を編集"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingDescriptionItemId(item.id);
+                                setEditingDescription('');
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-bond-pink hover:bg-pink-50 rounded border border-dashed border-gray-300"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              企業概要を追加
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
                     {/* タグセクション */}
                     <div className="mb-3">

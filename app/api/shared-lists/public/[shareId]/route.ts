@@ -11,6 +11,70 @@ import Notification from '@/models/Notification';
 import Evaluation from '@/models/Evaluation';
 import mongoose from 'mongoose';
 
+// JSONラッパーやマークダウンを除去して概要を抽出するヘルパー関数
+function cleanDescription(text: string | undefined | null, maxLength: number = 300): string {
+  if (!text) return '';
+
+  let cleanText = text;
+
+  // ```json { "answer": "..." } ``` 形式を処理
+  const jsonBlockMatch = cleanText.match(/```json\s*\{\s*"answer"\s*:\s*"([\s\S]*?)"\s*\}/);
+  if (jsonBlockMatch) {
+    cleanText = jsonBlockMatch[1];
+  }
+
+  // { "answer": "..." } 形式を処理
+  const jsonMatch = cleanText.match(/^\s*\{\s*"answer"\s*:\s*"([\s\S]*?)"\s*\}/);
+  if (jsonMatch) {
+    cleanText = jsonMatch[1];
+  }
+
+  // エスケープされた改行を実際の改行に変換
+  cleanText = cleanText.replace(/\\n/g, '\n').replace(/\\r/g, '');
+
+  // ## 2. 以降のセクションを削除（概要セクションのみ残す）
+  const sectionPatterns = [
+    /\n##\s*2\..*/s,
+    /\n2\.\s*会社概要.*/s,
+    /\n##\s*会社概要.*/s,
+  ];
+  for (const pattern of sectionPatterns) {
+    cleanText = cleanText.replace(pattern, '');
+  }
+
+  // マークダウンの見出し（# で始まる行）を除去
+  cleanText = cleanText.replace(/^#{1,6}\s+[^\n]*\n?/gm, '');
+
+  // メタ情報行を除去
+  cleanText = cleanText.replace(/^\*?作成[:：].*$/gm, '');
+  cleanText = cleanText.replace(/^\*?日付[:：].*$/gm, '');
+  cleanText = cleanText.replace(/^\*?Bond\s*ページ[:：].*$/gm, '');
+  cleanText = cleanText.replace(/^---+$/gm, '');
+
+  // 太字・斜体を除去
+  cleanText = cleanText.replace(/(\*\*|__)(.*?)\1/g, '$2');
+  cleanText = cleanText.replace(/(\*|_)(.*?)\1/g, '$2');
+
+  // リンクをテキストのみに
+  cleanText = cleanText.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+  // 余分な空白・改行を整理
+  cleanText = cleanText.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // 最大文字数で切り詰め
+  if (cleanText.length > maxLength) {
+    cleanText = cleanText.substring(0, maxLength);
+    const lastPeriod = cleanText.lastIndexOf('。');
+    if (lastPeriod > maxLength * 0.5) {
+      cleanText = cleanText.substring(0, lastPeriod + 1);
+    } else {
+      cleanText = cleanText + '...';
+    }
+  }
+
+  return cleanText;
+}
+
 // 閲覧権限をチェック
 // visibility: 'public' = ネット公開（誰でも閲覧可能）
 // visibility: 'link_only' = リンクを知っている人限定（リンクがあれば誰でも閲覧可能）
@@ -278,7 +342,9 @@ export async function GET(request: NextRequest) {
       const logoUrl = item.itemData.logoUrl || item.itemData.metadata?.logo || data.logo;
       const founded = item.itemData.founded || item.itemData.metadata?.founded || data.founded;
       // ユーザーが編集したdescriptionを優先、なければCompanyモデルから取得
-      const description = item.itemData.description || data.description || item.itemData.metadata?.description;
+      // どちらもcleanDescriptionで整形して返す
+      const rawDescription = item.itemData.description || data.description || item.itemData.metadata?.description;
+      const description = cleanDescription(rawDescription, 300);
       // 評価データを取得（slug、小文字slug、nameのいずれかでマッチ）
       const evaluations = evaluationsData[slug] || evaluationsData[slug?.toLowerCase()] || evaluationsData[name] || evaluationsData[name?.toLowerCase()] || [];
 
